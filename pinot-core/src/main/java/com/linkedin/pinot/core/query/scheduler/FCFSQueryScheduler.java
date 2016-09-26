@@ -18,11 +18,12 @@ package com.linkedin.pinot.core.query.scheduler;
 
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListenableFutureTask;
+import com.linkedin.pinot.common.metrics.ServerMetrics;
 import com.linkedin.pinot.common.metrics.ServerQueryPhase;
 import com.linkedin.pinot.common.query.QueryExecutor;
 import com.linkedin.pinot.common.query.QueryRequest;
 import com.linkedin.pinot.common.utils.DataTable;
-import java.util.concurrent.Callable;
 import javax.annotation.Nonnull;
 import org.apache.commons.configuration.Configuration;
 import org.slf4j.Logger;
@@ -37,24 +38,24 @@ public class FCFSQueryScheduler extends QueryScheduler {
 
   private static Logger LOGGER = LoggerFactory.getLogger(FCFSQueryScheduler.class);
 
-  public FCFSQueryScheduler(@Nonnull Configuration schedulerConfig, @Nonnull QueryExecutor queryExecutor) {
-    super(schedulerConfig, queryExecutor);
+  public FCFSQueryScheduler(@Nonnull Configuration schedulerConfig, @Nonnull QueryExecutor queryExecutor, @Nonnull
+      ServerMetrics serverMetrics) {
+    super(schedulerConfig, queryExecutor, serverMetrics);
     Preconditions.checkNotNull(queryExecutor);
   }
 
   @Override
-  public ListenableFuture<DataTable> submit(final QueryRequest queryRequest) {
+  public ListenableFuture<byte[]> submit(final QueryRequest queryRequest) {
     Preconditions.checkNotNull(queryRequest);
-
     queryRequest.getTimerContext().startNewPhaseTimer(ServerQueryPhase.SCHEDULER_WAIT);
-    ListenableFuture<DataTable> queryResultFuture = queryRunners.submit(new Callable<DataTable>() {
-      @Override
-      public DataTable call() {
-        return queryExecutor.processQuery(queryRequest, queryWorkers);
-      }
-    });
-
+    ListenableFutureTask<DataTable> queryTask = getQueryFutureTask(queryRequest);
+    ListenableFuture<byte[]> queryResultFuture = getQueryResultFuture(queryRequest, queryTask);
+    queryRunners.submit(queryTask);
     return queryResultFuture;
   }
 
+  @Override
+  public void run() {
+    // no-op
+  }
 }
