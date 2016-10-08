@@ -42,7 +42,7 @@
       <artifactId>json</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.ning</groupId>
+      <groupId>org.asynchttpclient</groupId>
       <artifactId>async-http-client</artifactId>
     </dependency>
     <dependency>

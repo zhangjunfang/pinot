@@ -15,12 +15,14 @@
  */
 package com.linkedin.pinot.client;
 
-import com.ning.http.client.AsyncHttpClient;
-import com.ning.http.client.Response;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
+import org.asynchttpclient.AsyncHttpClient;
+import org.asynchttpclient.DefaultAsyncHttpClient;
+import org.asynchttpclient.Response;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,7 +33,7 @@ import org.slf4j.LoggerFactory;
  */
 class JsonAsyncHttpPinotClientTransport implements PinotClientTransport {
   private static final Logger LOGGER = LoggerFactory.getLogger(JsonAsyncHttpPinotClientTransport.class);
-  AsyncHttpClient _httpClient = new AsyncHttpClient();
+  AsyncHttpClient _httpClient = new DefaultAsyncHttpClient();
 
   @Override
   public BrokerResponse executeQuery(String brokerAddress, String query) throws PinotClientException {
