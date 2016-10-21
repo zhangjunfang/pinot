@@ -296,7 +296,7 @@ public class ForwardIndexReaderBenchmark {
 
       ColumnMetadata columnMetadata = segmentMetadata.getColumnMetadataFor(column);
       if (columnMetadata.isSingleValue()) {
-        continue;
+        // continue;
       }
       if (!columnMetadata.isSingleValue()) {
 
