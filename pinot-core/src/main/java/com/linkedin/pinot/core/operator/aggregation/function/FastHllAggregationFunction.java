@@ -32,10 +32,8 @@ public class FastHllAggregationFunction implements AggregationFunction {
   private static final String FUNCTION_NAME = AggregationFunctionFactory.FASTHLL_AGGREGATION_FUNCTION;
   // TODO: change or not?
   private static final ResultDataType RESULT_DATA_TYPE = ResultDataType.HLL_PREAGGREGATED;
-  private final int hllLog2m;
 
-  public FastHllAggregationFunction(int hllLog2m) {
-    this.hllLog2m = hllLog2m;
+  public FastHllAggregationFunction() {
   }
 
   /**
@@ -56,10 +54,11 @@ public class FastHllAggregationFunction implements AggregationFunction {
 
     HyperLogLog hll = resultHolder.getResult();
     if (hll == null) {
-      hll = new HyperLogLog(hllLog2m);
-      resultHolder.setValue(hll);
+      if (values.length > 0) {
+        hll = HllUtil.convertStringToHll(values[0]);
+        resultHolder.setValue(hll);
+      }
     }
-
     for (int i = 0; i < length; i++) {
       try {
         HyperLogLog value = HllUtil.convertStringToHll(values[i]);
@@ -92,8 +91,9 @@ public class FastHllAggregationFunction implements AggregationFunction {
       int groupKey = groupKeys[i];
       HyperLogLog hll = resultHolder.getResult(groupKey);
       if (hll == null) {
-        hll = new HyperLogLog(hllLog2m);
+        hll = HllUtil.convertStringToHll(values[i]);
         resultHolder.setValueForKey(groupKey, hll);
+        continue;
       }
       try {
         HyperLogLog value = HllUtil.convertStringToHll(values[i]);
@@ -124,8 +124,9 @@ public class FastHllAggregationFunction implements AggregationFunction {
       for (int groupKey : docIdToGroupKeys[i]) {
         HyperLogLog hll = resultHolder.getResult(groupKey);
         if (hll == null) {
-          hll = new HyperLogLog(hllLog2m);
+          hll = HllUtil.convertStringToHll(values[i]);
           resultHolder.setValueForKey(groupKey, hll);
+          continue;
         }
         try {
           HyperLogLog value = HllUtil.convertStringToHll(values[i]);
