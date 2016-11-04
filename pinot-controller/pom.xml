@@ -105,6 +105,7 @@
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-core</artifactId>
     </dependency>
+    <!-- jersey dependencies -->
 
     <!-- Helix Related Dependency -->
     <dependency>
