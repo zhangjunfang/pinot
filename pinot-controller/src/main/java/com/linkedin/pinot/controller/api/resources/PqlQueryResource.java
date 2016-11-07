@@ -38,8 +38,7 @@ import org.restlet.representation.StringRepresentation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
-public class PqlQueryResource extends BasePinotControllerRestletResource {
+public class PqlQueryResource {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(PqlQueryResource.class);
   private static final Pql2Compiler REQUEST_COMPILER = new Pql2Compiler();

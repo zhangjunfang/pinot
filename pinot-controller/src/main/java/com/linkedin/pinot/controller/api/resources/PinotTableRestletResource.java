@@ -3,82 +3,99 @@ package com.linkedin.pinot.controller.api.resources;
 import com.linkedin.pinot.common.config.AbstractTableConfig;
 import com.linkedin.pinot.common.config.TableNameBuilder;
 import com.linkedin.pinot.common.metrics.ControllerMeter;
+import com.linkedin.pinot.common.metrics.ControllerMetrics;
 import com.linkedin.pinot.common.restlet.swagger.HttpVerb;
 import com.linkedin.pinot.common.restlet.swagger.Parameter;
 import com.linkedin.pinot.common.restlet.swagger.Paths;
 import com.linkedin.pinot.common.restlet.swagger.Summary;
 import com.linkedin.pinot.common.restlet.swagger.Tags;
 import com.linkedin.pinot.common.utils.CommonConstants.Helix.TableType;
+import com.linkedin.pinot.controller.ControllerConf;
 import com.linkedin.pinot.controller.api.ControllerRestApplication;
+import com.linkedin.pinot.controller.helix.core.PinotHelixResourceManager;
 import com.linkedin.pinot.controller.helix.core.PinotResourceManagerResponse;
-import java.io.File;
-import java.io.IOException;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-import org.apache.commons.io.FileUtils;
-import org.codehaus.jackson.JsonParseException;
-import org.codehaus.jackson.JsonProcessingException;
-import org.codehaus.jackson.map.JsonMappingException;
+import javax.inject.Inject;
+import javax.ws.rs.DELETE;
+import javax.ws.rs.DefaultValue;
+import javax.ws.rs.GET;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import org.codehaus.jackson.annotate.JsonProperty;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.restlet.data.Status;
 import org.restlet.representation.Representation;
 import org.restlet.representation.StringRepresentation;
-import org.restlet.resource.Delete;
 import org.restlet.resource.Get;
-import org.restlet.resource.Post;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-public class PinotTableRestletResource extends BasePinotControllerRestletResource {
+@Api(tags = Constants.TABLE_TAG)
+@Path("/")
+public class PinotTableRestletResource  {
   private static final Logger LOGGER = LoggerFactory.getLogger(PinotTableRestletResource.class);
-  private final File baseDataDir;
-  private final File tempDir;
 
-  public PinotTableRestletResource() throws IOException {
-    baseDataDir = new File(_controllerConf.getDataDir());
-    if (!baseDataDir.exists()) {
-      FileUtils.forceMkdir(baseDataDir);
-    }
-    tempDir = new File(baseDataDir, "schemasTemp");
-    if (!tempDir.exists()) {
-      FileUtils.forceMkdir(tempDir);
-    }
-  }
+  @Inject
+  ControllerConf controllerConf;
+  @Inject
+  PinotHelixResourceManager pinotHelixResourceManager;
+  @Inject
+  ControllerMetrics metrics;
 
-  @Override
-  @Post("json")
-  public Representation post(Representation entity) {
-    AbstractTableConfig config = null;
+  @POST
+  @Path("/tables")
+  @Produces(MediaType.APPLICATION_JSON)
+  // @Consumes may break clients. We don't want to do that yet
+  @ApiOperation(value = "Create a table", notes = "Creates a new table from json configuration")
+  @ApiResponses(value = {
+      @ApiResponse(code = 200, message = "Success"),
+      @ApiResponse(code = 400, message = "Bad request. Invalid table configuration"),
+      @ApiResponse(code=409, message="Conflict; table already exists"),
+      @ApiResponse(code = 500, message = "Internal server error")})
+  public SuccessResponse createTable(String requestBody) {
+    AbstractTableConfig config;
     try {
-      String jsonRequest = entity.getText();
-      config = AbstractTableConfig.init(jsonRequest);
-      try {
-        addTable(config);
-      } catch (Exception e) {
-        LOGGER.error("Caught exception while adding table", e);
-        ControllerRestApplication.getControllerMetrics().addMeteredGlobalValue(ControllerMeter.CONTROLLER_TABLE_ADD_ERROR, 1L);
-        setStatus(Status.SERVER_ERROR_INTERNAL);
-        return new StringRepresentation("Failed: " + e.getMessage());
-      }
-      return new StringRepresentation("Success");
+      config = AbstractTableConfig.init(requestBody);
     } catch (Exception e) {
-      LOGGER.error("error reading/serializing requestJSON", e);
-      setStatus(Status.CLIENT_ERROR_BAD_REQUEST);
-      return new StringRepresentation("Failed: " + e.getMessage());
+      LOGGER.info("Error deserializing request json for table creation", e);
+      throw new WebApplicationException("Bad json configuration for table creation request",
+          Response.Status.BAD_REQUEST);
+    }
+    try {
+      TableType type = TableType.valueOf(config.getTableType());
+      if (type == TableType.OFFLINE && pinotHelixResourceManager.hasOfflineTable(config.getTableName())) {
+        throw new WebApplicationException("Table " + config.getTableName() + " already exists");
+      } else if (type == TableType.REALTIME && pinotHelixResourceManager.hasRealtimeTable(config.getTableName())) {
+        throw new WebApplicationException("Tabe " + config.getTableName() + " already exists");
+      }
+      pinotHelixResourceManager.addTable(config);
+      return new SuccessResponse("Table successfully created");
+    } catch (Exception e) {
+      LOGGER.error("Caught exception while adding table", e);
+        metrics.addMeteredGlobalValue(ControllerMeter.CONTROLLER_TABLE_ADD_ERROR, 1L);
+      throw new WebApplicationException("Failed to create table", Response.Status.INTERNAL_SERVER_ERROR);
     }
   }
 
-  @HttpVerb("post")
-  @Summary("Adds a table")
-  @Tags({ "table" })
-  @Paths({ "/tables", "/tables/" })
-  private void addTable(AbstractTableConfig config) throws IOException {
-    _pinotHelixResourceManager.addTable(config);
+  public static class Tables {
+    List<String> tables;
   }
-
   /**
    * URI Mappings:
    * - "/tables", "/tables/": List all the tables
@@ -98,6 +115,17 @@ public class PinotTableRestletResource extends BasePinotControllerRestletResourc
    * {@inheritDoc}
    * @see org.restlet.resource.ServerResource#get()
    */
+  @GET
+  @Path("/tables")
+  @Produces(MediaType.APPLICATION_JSON)
+  // @Consumes may break clients. We don't want to do that yet
+  @ApiOperation(value = "List all tables", notes = "List all the tables")
+  @ApiResponses(value = {@ApiResponse(code = 200, message = "Success"),
+      @ApiResponse(code = 500, message = "Internal server error")})
+  public String listTables() {
+
+  }
+
   @Override
   @Get
   public Representation get() {
@@ -139,31 +167,45 @@ public class PinotTableRestletResource extends BasePinotControllerRestletResourc
     }
   }
 
-  @HttpVerb("get")
-  @Summary("Views a table's configuration")
-  @Tags({ "table" })
-  @Paths({ "/tables/{tableName}", "/tables/{tableName}/" })
-  private Representation getTable(
-      @Parameter(name = "tableName", in = "path", description = "The name of the table for which to toggle its state",
-          required = true) String tableName,
-      @Parameter(name = "type", in = "query", description = "Type of table, Offline or Realtime", required = true) String tableType)
-      throws JSONException, JsonParseException, JsonMappingException, JsonProcessingException, IOException {
-    JSONObject ret = new JSONObject();
-
-    if ((tableType == null || TableType.OFFLINE.name().equalsIgnoreCase(tableType))
-        && _pinotHelixResourceManager.hasOfflineTable(tableName)) {
-      AbstractTableConfig config = _pinotHelixResourceManager.getTableConfig(tableName, TableType.OFFLINE);
-      ret.put(TableType.OFFLINE.name(), config.toJSON());
-    }
-
-    if ((tableType == null || TableType.REALTIME.name().equalsIgnoreCase(tableType))
-        && _pinotHelixResourceManager.hasRealtimeTable(tableName)) {
-      AbstractTableConfig config = _pinotHelixResourceManager.getTableConfig(tableName, TableType.REALTIME);
-      ret.put(TableType.REALTIME.name(), config.toJSON());
-    }
-
-    return new StringRepresentation(ret.toString(2));
+  static class TableConfig {
+    @JsonProperty("OFFLINE")
+    AbstractTableConfig offline;
+    @JsonProperty("REALTIME")
+    AbstractTableConfig realtime;
   }
+
+  @GET
+  @Path("/tables/{tableName}")
+  @ApiOperation(value = "Get table configuration", notes = "Gives full table configuration")
+  @ApiResponses(value = {
+      @ApiResponse(code = 200, message = "Success"),
+      @ApiResponse(code = 404, message = "Table not found"),
+      @ApiResponse(code = 500, message = "Server error reading table configuration")
+  })
+  public TableConfig getTableConfiguration(
+      @ApiParam(value = "Table name (no type)", required = true)
+      @PathParam("tableName") String tableName,
+      @ApiParam(value = "Table type", required = false, defaultValue = "",
+          example = "OFFLINE", allowableValues = "[OFFLINE,ONLINE")
+      @QueryParam("type") @DefaultValue("") String type) {
+    TableConfig tableConfig = new TableConfig();
+    try {
+      if (type == null || type.isEmpty() || TableType.OFFLINE.name().equalsIgnoreCase(type)) {
+        tableConfig.offline = pinotHelixResourceManager.getTableConfig(tableName, TableType.OFFLINE);
+      }
+      if (type == null || type.isEmpty() || TableType.REALTIME.name().equalsIgnoreCase(type)) {
+        tableConfig.realtime = pinotHelixResourceManager.getTableConfig(tableName, TableType.REALTIME);
+      }
+    } catch (Exception e) {
+      LOGGER.error("Error reading configuration for table: {}", tableName, e);
+      throw new WebApplicationException("Error reading table configuration", Response.Status.INTERNAL_SERVER_ERROR);
+    }
+    if (tableConfig.offline == null && tableConfig.realtime == null) {
+      throw new WebApplicationException("Table configuration not found", Response.Status.NOT_FOUND);
+    }
+    return tableConfig;
+  }
+
 
   @HttpVerb("get")
   @Summary("Views all tables' configuration")
@@ -173,7 +215,7 @@ public class PinotTableRestletResource extends BasePinotControllerRestletResourc
     JSONObject object = new JSONObject();
     JSONArray tableArray = new JSONArray();
     Set<String> tableNames = new TreeSet<String>();
-    tableNames.addAll(_pinotHelixResourceManager.getAllUniquePinotRawTableNames());
+    tableNames.addAll(pinotHelixResourceManager.getAllUniquePinotRawTableNames());
     for (String pinotTableName : tableNames) {
       tableArray.put(pinotTableName);
     }
@@ -245,40 +287,26 @@ public class PinotTableRestletResource extends BasePinotControllerRestletResourc
     }
   }
 
-  @Override
-  @Delete
-  public Representation delete() {
-    StringRepresentation presentation = null;
+  @DELETE
+  @Path("/tables/{tableName}")
+  @ApiOperation(value = "Delete a table", notes = "Deletes a table")
+  @ApiResponses(value = {@ApiResponse(code=200, message="Success"),
+      @ApiResponse(code = 404, message = "Table not found"),
+      @ApiResponse(code = 500, message =  "Internal server error")})
+  public SuccessResponse deleteTable(
+      @ApiParam(value = "Table name without type", required = true)
+      @PathParam("tableName") String tableName,
+      @ApiParam(value = "Table type", required = false, example = "offline",
+          allowableValues = "[offline, realtime]")
+      @DefaultValue("")
+      @QueryParam(Constants.TABLE_TYPE) String tableType) {
 
-    final String tableName = (String) getRequest().getAttributes().get(TABLE_NAME);
-    final String type = getReference().getQueryAsForm().getValues(TABLE_TYPE);
-    if (!deleteTable(tableName, type)) {
-      String error = new String("Error: Table " + tableName + " not found.");
-      LOGGER.error(error);
-      setStatus(Status.CLIENT_ERROR_BAD_REQUEST);
-      return new StringRepresentation(error);
+    if (tableType.isEmpty() || tableType.equalsIgnoreCase(TableType.OFFLINE.name())) {
+      pinotHelixResourceManager.deleteOfflineTable(tableName);
     }
-    return presentation;
-  }
-
-  @HttpVerb("delete")
-  @Summary("Deletes a table")
-  @Tags({ "table" })
-  @Paths({ "/tables/{tableName}", "/tables/{tableName}/" })
-  private boolean deleteTable(@Parameter(name = "tableName", in = "path",
-      description = "The name of the table to delete", required = true) String tableName, @Parameter(name = "type",
-      in = "query", description = "The type of table to delete, either offline or realtime") String type) {
-    if (tableName == null) {
-      LOGGER.error("Error: Table name null.");
-      setStatus(Status.CLIENT_ERROR_BAD_REQUEST);
-      return false;
+    if (tableType.isEmpty() || tableType.equalsIgnoreCase(TableType.REALTIME.name())) {
+      pinotHelixResourceManager.deleteRealtimeTable(tableName);
     }
-    if (type == null || type.equalsIgnoreCase(TableType.OFFLINE.name())) {
-      _pinotHelixResourceManager.deleteOfflineTable(tableName);
-    }
-    if (type == null || type.equalsIgnoreCase(TableType.REALTIME.name())) {
-      _pinotHelixResourceManager.deleteRealtimeTable(tableName);
-    }
-    return true;
+    return new SuccessResponse("Deleted table " + tableName);
   }
 }

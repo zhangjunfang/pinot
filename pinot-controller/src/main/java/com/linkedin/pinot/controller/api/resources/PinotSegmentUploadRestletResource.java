@@ -22,6 +22,7 @@ import com.linkedin.pinot.common.config.TableNameBuilder;
 import com.linkedin.pinot.common.metadata.ZKMetadataProvider;
 import com.linkedin.pinot.common.metadata.segment.OfflineSegmentZKMetadata;
 import com.linkedin.pinot.common.metrics.ControllerMeter;
+import com.linkedin.pinot.common.metrics.ControllerMetrics;
 import com.linkedin.pinot.common.restlet.swagger.HttpVerb;
 import com.linkedin.pinot.common.restlet.swagger.Parameter;
 import com.linkedin.pinot.common.restlet.swagger.Paths;
@@ -40,10 +41,12 @@ import com.linkedin.pinot.common.utils.TarGzCompressionUtils;
 import com.linkedin.pinot.common.utils.time.TimeUtils;
 import com.linkedin.pinot.controller.ControllerConf;
 import com.linkedin.pinot.controller.api.ControllerRestApplication;
+import com.linkedin.pinot.controller.helix.core.PinotHelixResourceManager;
 import com.linkedin.pinot.controller.helix.core.PinotResourceManagerResponse;
 import com.linkedin.pinot.controller.helix.core.realtime.SegmentCompletionManager;
 import com.linkedin.pinot.controller.validation.StorageQuotaChecker;
 import com.linkedin.pinot.core.segment.index.SegmentMetadataImpl;
+import io.swagger.annotations.Api;
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -53,6 +56,8 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import javax.annotation.Nonnull;
+import javax.inject.Inject;
+import javax.ws.rs.Path;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
@@ -79,7 +84,9 @@ import org.slf4j.LoggerFactory;
  * sample curl call : curl -F campaignInsights_adsAnalysis-bmCamp_11=@campaignInsights_adsAnalysis-bmCamp_11      http://localhost:8998/segments
  *
  */
-public class PinotSegmentUploadRestletResource extends BasePinotControllerRestletResource {
+@Api(tags = "Segment")
+@Path("/")
+public class PinotSegmentUploadRestletResource {
   private static final Logger LOGGER = LoggerFactory.getLogger(PinotSegmentUploadRestletResource.class);
   private static final String RESTLET_HTTP_HEADERS = "org.restlet.http.headers";
 
@@ -89,8 +96,14 @@ public class PinotSegmentUploadRestletResource extends BasePinotControllerRestle
   protected final SegmentCompletionManager segmentCompletionManager;
   private final String vip;
 
+  @Inject
+  ControllerConf controllerConf;
+  @Inject
+  PinotHelixResourceManager pinotHelixResourceManager;
+  @Inject
+  ControllerMetrics metrics;
   public PinotSegmentUploadRestletResource() throws IOException {
-    baseDataDir = new File(_controllerConf.getDataDir());
+    baseDataDir = new File(controllerConf.getDataDir());
     if (!baseDataDir.exists()) {
       FileUtils.forceMkdir(baseDataDir);
     }
@@ -103,7 +116,7 @@ public class PinotSegmentUploadRestletResource extends BasePinotControllerRestle
       tempUntarredPath.mkdirs();
     }
 
-    vip = _controllerConf.generateVipUrl();
+    vip = controllerConf.generateVipUrl();
     segmentCompletionManager = SegmentCompletionManager.getInstance();
     LOGGER.info("controller download url base is : " + vip);
   }
@@ -190,8 +203,8 @@ public class PinotSegmentUploadRestletResource extends BasePinotControllerRestle
 
     if (activeOnly) {
       String offlineTableName = TableNameBuilder.OFFLINE_TABLE_NAME_BUILDER.forTable(tableName);
-      List<String> segmentList = _pinotHelixResourceManager.getAllSegmentsForResource(offlineTableName);
-      ZkHelixPropertyStore<ZNRecord> propertyStore = _pinotHelixResourceManager.getPropertyStore();
+      List<String> segmentList = pinotHelixResourceManager.getAllSegmentsForResource(offlineTableName);
+      ZkHelixPropertyStore<ZNRecord> propertyStore = pinotHelixResourceManager.getPropertyStore();
 
       for (String segmentName : segmentList) {
         OfflineSegmentZKMetadata offlineSegmentZKMetadata =
@@ -203,7 +216,7 @@ public class PinotSegmentUploadRestletResource extends BasePinotControllerRestle
 
       if (tableDir.exists()) {
         for (final File file : tableDir.listFiles()) {
-	  final String url = _controllerConf.generateVipUrl() + "/segments/" + tableName + "/" + file.getName();
+	  final String url = controllerConf.generateVipUrl() + "/segments/" + tableName + "/" + file.getName();
           ret.put(url);
         }
       } else {
@@ -346,8 +359,8 @@ public class PinotSegmentUploadRestletResource extends BasePinotControllerRestle
         // The content is arbitrarily sent as plain text.
         rep = new StringRepresentation(dataFile + " sucessfully uploaded", MediaType.TEXT_PLAIN);
         tmpSegmentDir =
-            new File(tempUntarredPath, dataFile.getName() + "-" + _controllerConf.getControllerHost() + "_"
-                + _controllerConf.getControllerPort() + "-" + System.currentTimeMillis());
+            new File(tempUntarredPath, dataFile.getName() + "-" + controllerConf.getControllerHost() + "_"
+                + controllerConf.getControllerPort() + "-" + System.currentTimeMillis());
         LOGGER.info("Untar segment to temp dir: " + tmpSegmentDir);
         if (tmpSegmentDir.exists()) {
           FileUtils.deleteDirectory(tmpSegmentDir);
@@ -429,7 +442,7 @@ public class PinotSegmentUploadRestletResource extends BasePinotControllerRestle
     String tableName = metadata.getTableName();
     File segmentFile = new File(tableDir, dataFile.getName());
     OfflineTableConfig offlineTableConfig = (OfflineTableConfig) ZKMetadataProvider
-        .getOfflineTableConfig(_pinotHelixResourceManager.getPropertyStore(), tableName);
+        .getOfflineTableConfig(pinotHelixResourceManager.getPropertyStore(), tableName);
 
     if (offlineTableConfig == null) {
       LOGGER.info("Missing configuration for table: {} in helix", metadata.getTableName());
@@ -463,7 +476,7 @@ public class PinotSegmentUploadRestletResource extends BasePinotControllerRestle
         downloadUrl = ControllerConf.constructDownloadUrl(tableName, dataFile.getName(), vip);
       }
       // TODO: this will read table configuration again from ZK. We should optimize that
-      response = _pinotHelixResourceManager.addSegment(metadata, downloadUrl);
+      response = pinotHelixResourceManager.addSegment(metadata, downloadUrl);
     }
 
     if (response.isSuccessful()) {
@@ -588,7 +601,7 @@ public class PinotSegmentUploadRestletResource extends BasePinotControllerRestle
     StorageQuotaChecker quotaChecker = new StorageQuotaChecker(offlineTableConfig, tableSizeReader);
     String offlineTableName = TableNameBuilder.OFFLINE_TABLE_NAME_BUILDER.forTable(metadata.getTableName());
     return quotaChecker.isSegmentStorageWithinQuota(segmentFile, offlineTableName,
-        metadata.getName(), _controllerConf.getServerAdminRequestTimeoutSeconds() * 1000);
+        metadata.getName(), controllerConf.getServerAdminRequestTimeoutSeconds() * 1000);
   }
 
 }

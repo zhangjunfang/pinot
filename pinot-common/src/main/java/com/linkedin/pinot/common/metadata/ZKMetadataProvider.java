@@ -156,7 +156,7 @@ public class ZKMetadataProvider {
     }
   }
 
-  public static AbstractTableConfig getRealtimeTableConfig(ZkHelixPropertyStore<ZNRecord> propertyStore, String tableName) {
+  public static @Nullable AbstractTableConfig getRealtimeTableConfig(ZkHelixPropertyStore<ZNRecord> propertyStore, String tableName) {
     String realtimeTableName = TableNameBuilder.REALTIME_TABLE_NAME_BUILDER.forTable(tableName);
     ZNRecord znRecord = propertyStore.get(constructPropertyStorePathForResourceConfig(realtimeTableName), null, AccessOption.PERSISTENT);
     if (znRecord == null) {

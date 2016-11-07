@@ -807,7 +807,7 @@ public class PinotHelixResourceManager {
     return response;
   }
 
-  public Set<String> getAllInstancesForServerTenant(String tenantName) {
+  public @Nonnull  Set<String> getAllInstancesForServerTenant(String tenantName) {
     Set<String> instancesSet = new HashSet<String>();
     instancesSet.addAll(_helixAdmin.getInstancesInClusterWithTag(_helixClusterName,
         ControllerTenantNameBuilder.getOfflineTenantNameForTenant(tenantName)));
@@ -816,7 +816,7 @@ public class PinotHelixResourceManager {
     return instancesSet;
   }
 
-  public Set<String> getAllInstancesForBrokerTenant(String tenantName) {
+  public @Nonnull Set<String> getAllInstancesForBrokerTenant(String tenantName) {
     Set<String> instancesSet = new HashSet<String>();
     instancesSet.addAll(_helixAdmin.getInstancesInClusterWithTag(_helixClusterName,
         ControllerTenantNameBuilder.getBrokerTenantNameForTenant(tenantName)));
@@ -1626,7 +1626,7 @@ public class PinotHelixResourceManager {
     return ZKMetadataProvider.getRealtimeTableConfig(getPropertyStore(), realtimeTableName);
   }
 
-  public AbstractTableConfig getTableConfig(String tableName, TableType type) throws JsonParseException,
+  public @Nullable AbstractTableConfig getTableConfig(String tableName, TableType type) throws JsonParseException,
       JsonMappingException, JsonProcessingException, JSONException, IOException {
     String actualTableName = new TableNameBuilder(type).forTable(tableName);
     AbstractTableConfig config = null;

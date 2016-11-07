@@ -57,7 +57,8 @@ public class TableSizeResource extends ServerResource {
   @Produces(MediaType.APPLICATION_JSON)
   @Path("/tables/{tableName}/size")
   @ApiOperation(value = "Show table storage size", notes = "Lists size of all the segments of the table")
-  @ApiResponses(value = {@ApiResponse(code = 200, message = "Success"), @ApiResponse(code = 500, message = "Internal server error"), @ApiResponse(code = 404, message = "Table not found")})
+  @ApiResponses(value = {@ApiResponse(code = 200, message = "Success"), @ApiResponse(code = 500, message = "Internal server error"),
+      @ApiResponse(code = 404, message = "Table not found")})
   public TableSizeInfo getTableSize(
       @ApiParam(value = "Table Name with type", required = true) @PathParam("tableName") String tableName,
       @ApiParam(value = "Provide detailed information", required = false) @DefaultValue("true") @QueryParam("detailed") boolean detailed)

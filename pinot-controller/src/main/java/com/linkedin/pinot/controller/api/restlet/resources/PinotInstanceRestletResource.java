@@ -54,15 +54,6 @@ import com.linkedin.pinot.controller.helix.core.PinotResourceManagerResponse;
 public class PinotInstanceRestletResource extends BasePinotControllerRestletResource {
   private static final Logger LOGGER = LoggerFactory.getLogger(PinotInstanceRestletResource.class);
 
-  private final ObjectMapper mapper;
-
-  public PinotInstanceRestletResource() {
-    getVariants().add(new Variant(MediaType.TEXT_PLAIN));
-    getVariants().add(new Variant(MediaType.APPLICATION_JSON));
-    setNegotiated(false);
-    mapper = new ObjectMapper();
-  }
-
   @Override
   @Post("json")
   public Representation post(Representation entity) {

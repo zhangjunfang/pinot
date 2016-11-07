@@ -46,7 +46,7 @@ public class BasePinotControllerRestletResource extends ServerResource {
   private final static String CONTROLLER_COMPONENT = "pinot-controller";
   private static String controllerVersion =  null;
 
-  static enum StateType {
+  enum StateType {
     ENABLE,
     DISABLE,
     DROP

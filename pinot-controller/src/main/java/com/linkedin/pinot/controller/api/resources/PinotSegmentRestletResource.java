@@ -22,6 +22,7 @@ import com.linkedin.pinot.common.metadata.ZKMetadataProvider;
 import com.linkedin.pinot.common.metadata.segment.OfflineSegmentZKMetadata;
 import com.linkedin.pinot.common.metadata.segment.RealtimeSegmentZKMetadata;
 import com.linkedin.pinot.common.metrics.ControllerMeter;
+import com.linkedin.pinot.common.metrics.ControllerMetrics;
 import com.linkedin.pinot.common.restlet.swagger.HttpVerb;
 import com.linkedin.pinot.common.restlet.swagger.Parameter;
 import com.linkedin.pinot.common.restlet.swagger.Paths;
@@ -30,10 +31,15 @@ import com.linkedin.pinot.common.restlet.swagger.Responses;
 import com.linkedin.pinot.common.restlet.swagger.Summary;
 import com.linkedin.pinot.common.restlet.swagger.Tags;
 import com.linkedin.pinot.common.utils.CommonConstants.Helix.TableType;
+import com.linkedin.pinot.controller.ControllerConf;
 import com.linkedin.pinot.controller.api.ControllerRestApplication;
+import com.linkedin.pinot.controller.helix.core.PinotHelixResourceManager;
 import com.linkedin.pinot.controller.helix.core.PinotResourceManagerResponse;
+import io.swagger.annotations.Api;
 import java.util.ArrayList;
 import java.util.List;
+import javax.inject.Inject;
+import javax.ws.rs.Path;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.helix.ZNRecord;
 import org.apache.helix.store.zk.ZkHelixPropertyStore;
@@ -49,12 +55,20 @@ import org.restlet.resource.Get;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
-public class PinotSegmentRestletResource extends BasePinotControllerRestletResource {
+@Api(tags = "Segment")
+@Path("/")
+public class PinotSegmentRestletResource {
   private static final Logger LOGGER = LoggerFactory.getLogger(PinotSegmentRestletResource.class);
 
   private final ObjectMapper mapper;
   private long _offlineToOnlineTimeoutInseconds;
+
+  @Inject
+  ControllerConf controllerConf;
+  @Inject
+  PinotHelixResourceManager pinotHelixResourceManager;
+  @Inject
+  ControllerMetrics metrics;
 
   public PinotSegmentRestletResource() {
     getVariants().add(new Variant(MediaType.TEXT_PLAIN));
