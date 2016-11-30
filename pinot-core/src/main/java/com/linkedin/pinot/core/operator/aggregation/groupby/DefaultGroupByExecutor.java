@@ -261,9 +261,7 @@ public class DefaultGroupByExecutor implements GroupByExecutor {
 
     for (int i = 0; i < _numAggrFunc; i++) {
       AggregationInfo aggregationInfo = aggregationInfoList.get(i);
-      String[] columns = aggregationInfo.getAggregationParams().get("column").trim().split(",");
-
-      _aggrFuncContextArray[i] = new AggregationFunctionContext(aggregationInfo.getAggregationType(), columns);
+      _aggrFuncContextArray[i] = new AggregationFunctionContext(aggregationInfo, null);
       _resultHolderArray[i] =
           ResultHolderFactory.getGroupByResultHolder(_aggrFuncContextArray[i].getAggregationFunction(), maxNumResults,
               trimSize);

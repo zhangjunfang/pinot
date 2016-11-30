@@ -15,6 +15,8 @@
  */
 package com.linkedin.pinot.core.operator.aggregation.function;
 
+import java.util.Map;
+
 import com.linkedin.pinot.core.startree.hll.HllConstants;
 
 
@@ -64,7 +66,7 @@ public class AggregationFunctionFactory {
    * @param functionName
    * @return
    */
-  public static AggregationFunction getAggregationFunction(String functionName) {
+  public static AggregationFunction getAggregationFunction(String functionName, Map<String,Object> funcArg) {
     switch (functionName.toLowerCase()) {
       case COUNT_AGGREGATION_FUNCTION:
         return new CountAggregationFunction();

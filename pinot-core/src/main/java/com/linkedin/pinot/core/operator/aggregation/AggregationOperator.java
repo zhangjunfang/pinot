@@ -25,8 +25,10 @@ import com.linkedin.pinot.core.operator.MProjectionOperator;
 import com.linkedin.pinot.core.operator.blocks.DocIdSetBlock;
 import com.linkedin.pinot.core.operator.blocks.IntermediateResultsBlock;
 import com.linkedin.pinot.core.operator.blocks.ProjectionBlock;
+import com.linkedin.pinot.core.query.aggregation.AggregationFunction;
 import com.linkedin.pinot.core.query.aggregation.AggregationFunctionFactory;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -36,11 +38,12 @@ import java.util.List;
 public class AggregationOperator extends BaseOperator {
 
   private final AggregationExecutor _aggregationExecutor;
-  private final List<AggregationInfo> _aggregationInfoList;
+//  private final List<AggregationInfo> _aggregationInfoList;
   private final MProjectionOperator _projectionOperator;
   private final long _numTotalRawDocs;
   private int _nextBlockCallCounter = 0;
   private ExecutionStatistics _executionStatistics;
+  private AggregationFunctionContext[] _aggrFuncContextArray;
 
   /**
    * Constructor for the class.
@@ -49,13 +52,12 @@ public class AggregationOperator extends BaseOperator {
    * @param projectionOperator Projection operator.
    * @param numTotalRawDocs Number of total raw documents.
    */
-  public AggregationOperator(List<AggregationInfo> aggregationsInfoList, MProjectionOperator projectionOperator,
+  public AggregationOperator(AggregationFunctionContext[] aggrFuncContextArray, MProjectionOperator projectionOperator,
       long numTotalRawDocs) {
-    Preconditions.checkArgument((aggregationsInfoList != null) && (aggregationsInfoList.size() > 0));
+    this._aggrFuncContextArray = aggrFuncContextArray;
+    Preconditions.checkArgument((aggrFuncContextArray != null) && (aggrFuncContextArray.length > 0));
     Preconditions.checkNotNull(projectionOperator);
-
-    _aggregationExecutor = new DefaultAggregationExecutor(aggregationsInfoList);
-    _aggregationInfoList = aggregationsInfoList;
+    _aggregationExecutor = new DefaultAggregationExecutor(_aggrFuncContextArray);
     _projectionOperator = projectionOperator;
     _numTotalRawDocs = numTotalRawDocs;
   }
@@ -99,7 +101,10 @@ public class AggregationOperator extends BaseOperator {
 
     // Build intermediate result block based on aggregation result from the executor.
     List<Serializable> aggregationResults = _aggregationExecutor.getResult();
-    return new IntermediateResultsBlock(AggregationFunctionFactory.getAggregationFunction(_aggregationInfoList),
+    //TODO:FIX THIS
+//    AggregationFunctionFactory.getAggregationFunction(_aggrFuncContextArray);
+    List<AggregationFunction> list = new ArrayList<>();
+    return new IntermediateResultsBlock(list,
         aggregationResults);
   }
 

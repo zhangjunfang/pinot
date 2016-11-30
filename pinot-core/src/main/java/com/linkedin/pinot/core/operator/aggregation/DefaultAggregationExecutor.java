@@ -51,18 +51,12 @@ public class DefaultAggregationExecutor implements AggregationExecutor {
   boolean _inited = false;
   boolean _finished = false;
 
-  public DefaultAggregationExecutor(List<AggregationInfo> aggregationInfoList) {
-    Preconditions.checkNotNull(aggregationInfoList);
-    Preconditions.checkArgument(aggregationInfoList.size() > 0);
+  public DefaultAggregationExecutor(AggregationFunctionContext[] aggrFuncContextArray) {
+    Preconditions.checkNotNull(aggrFuncContextArray);
+    Preconditions.checkArgument(aggrFuncContextArray.length > 0);
 
-    _numAggrFunc = aggregationInfoList.size();
+    _numAggrFunc = aggrFuncContextArray.length;
     _aggrFuncContextArray = new AggregationFunctionContext[_numAggrFunc];
-    for (int i = 0; i < _numAggrFunc; i++) {
-      AggregationInfo aggregationInfo = aggregationInfoList.get(i);
-      String[] columns = aggregationInfo.getAggregationParams().get("column").trim().split(",");
-      _aggrFuncContextArray[i] = new AggregationFunctionContext(
-          aggregationInfo.getAggregationType(), columns);
-    }
     _resultHolderArray = new AggregationResultHolder[_numAggrFunc];
   }
 

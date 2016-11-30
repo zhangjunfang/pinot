@@ -29,6 +29,7 @@ import com.linkedin.pinot.core.operator.BReusableFilteredDocIdSetOperator;
 import com.linkedin.pinot.core.operator.BaseOperator;
 import com.linkedin.pinot.core.operator.MProjectionOperator;
 import com.linkedin.pinot.core.operator.aggregation.AggregationExecutor;
+import com.linkedin.pinot.core.operator.aggregation.AggregationFunctionContext;
 import com.linkedin.pinot.core.operator.aggregation.DefaultAggregationExecutor;
 import com.linkedin.pinot.core.operator.blocks.MatchEntireSegmentDocIdSetBlock;
 import com.linkedin.pinot.core.operator.blocks.ProjectionBlock;
@@ -134,7 +135,13 @@ public class DefaultAggregationExecutorTest {
     BReusableFilteredDocIdSetOperator docIdSetOperator = new BReusableFilteredDocIdSetOperator(matchEntireSegmentOperator,totalRawDocs, 10000);
     MProjectionOperator projectionOperator = new MProjectionOperator(dataSourceMap, docIdSetOperator);
     ProjectionBlock projectionBlock = (ProjectionBlock) projectionOperator.nextBlock();
-    AggregationExecutor aggregationExecutor = new DefaultAggregationExecutor(_aggregationInfoList);
+    int numAggFuncs = _aggregationInfoList.size();
+    AggregationFunctionContext[] aggrFuncContextArray = new AggregationFunctionContext[numAggFuncs];
+    for (int i = 0; i < numAggFuncs; i++) {
+      AggregationInfo aggregationInfo = _aggregationInfoList.get(i);
+      aggrFuncContextArray[i] = new AggregationFunctionContext(aggregationInfo, null);
+    }
+    AggregationExecutor aggregationExecutor = new DefaultAggregationExecutor(aggrFuncContextArray);
     aggregationExecutor.init();
     aggregationExecutor.aggregate(projectionBlock);
     aggregationExecutor.finish();

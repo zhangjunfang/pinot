@@ -15,7 +15,9 @@
  */
 package com.linkedin.pinot.core.operator.aggregation;
 
-import com.linkedin.pinot.common.segment.SegmentMetadata;
+import java.util.Map;
+
+import com.linkedin.pinot.common.request.AggregationInfo;
 import com.linkedin.pinot.core.operator.aggregation.function.AggregationFunction;
 import com.linkedin.pinot.core.operator.aggregation.function.AggregationFunctionFactory;
 
@@ -24,6 +26,7 @@ import com.linkedin.pinot.core.operator.aggregation.function.AggregationFunction
  * This class caches miscellaneous data to perform efficient aggregation.
  */
 public class AggregationFunctionContext {
+  private final AggregationInfo _aggregationInfo;
   private final AggregationFunction _aggregationFunction;
   private final String[] _aggrColumns;
 
@@ -33,9 +36,11 @@ public class AggregationFunctionContext {
    * @param aggFuncName
    * @param aggrColumns
    */
-  public AggregationFunctionContext(String aggFuncName, String[] aggrColumns) {
-    _aggregationFunction = AggregationFunctionFactory.getAggregationFunction(aggFuncName);
-    _aggrColumns = aggrColumns;
+  public AggregationFunctionContext(AggregationInfo aggregationInfo, Map<String,Object> functionArguments) {
+    this._aggregationInfo = aggregationInfo;
+    _aggrColumns = aggregationInfo.getAggregationParams().get("column").trim().split(",");
+    String aggFuncName = aggregationInfo.getAggregationType();
+    _aggregationFunction = AggregationFunctionFactory.getAggregationFunction(aggFuncName, functionArguments);
   }
 
   /**
@@ -52,5 +57,9 @@ public class AggregationFunctionContext {
    */
   public String[] getAggregationColumns() {
     return _aggrColumns;
+  }
+  
+  public AggregationInfo getAggregationInfo() {
+    return _aggregationInfo;
   }
 }
