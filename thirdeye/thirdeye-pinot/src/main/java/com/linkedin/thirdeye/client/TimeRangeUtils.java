@@ -4,13 +4,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import org.jfree.data.time.Millisecond;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.joda.time.Days;
 import org.joda.time.Duration;
 
 import com.google.common.collect.Range;
 import com.linkedin.thirdeye.api.TimeGranularity;
 import com.linkedin.thirdeye.api.TimeRange;
+import org.joda.time.Hours;
+import org.joda.time.Minutes;
+import org.joda.time.Seconds;
 
 /**
  * Not to be confused with {@link TimeRange}. This class handles splitting time windows into
@@ -58,6 +63,24 @@ public class TimeRangeUtils {
       throw new IllegalArgumentException("Timegranularity:" + granularity + " not supported");
     }
     return output;
+  }
+
+  public static int computeBucketCount(DateTime windowStartTime, DateTime windowEndTime,
+      TimeGranularity timeGranularity) {
+    switch (timeGranularity.getUnit()) {
+    case DAYS:
+      return Days.daysBetween(windowStartTime, windowEndTime).getDays();
+    case HOURS:
+      return Hours.hoursBetween(windowStartTime, windowEndTime).getHours();
+    case MINUTES:
+      return Minutes.minutesBetween(windowStartTime, windowEndTime).getMinutes();
+    case SECONDS:
+      return Seconds.secondsBetween(windowStartTime, windowEndTime).getSeconds();
+    case MILLISECONDS:
+      return (int) (windowEndTime.getMillis() - windowStartTime.getMillis());
+    default:
+      throw new IllegalArgumentException("Timegranularity:" + timeGranularity + " not supported");
+    }
   }
 
   public static void main(String[] args) {

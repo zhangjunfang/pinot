@@ -3,16 +3,17 @@ package com.linkedin.thirdeye.anomaly.views.function;
 import com.linkedin.pinot.pql.parsers.utils.Pair;
 import com.linkedin.thirdeye.anomaly.views.AnomalyTimelinesView;
 import com.linkedin.thirdeye.api.MetricTimeSeries;
+import com.linkedin.thirdeye.api.TimeGranularity;
 import com.linkedin.thirdeye.datalayer.dto.AnomalyFunctionDTO;
 import com.linkedin.thirdeye.datalayer.dto.RawAnomalyResultDTO;
 import java.util.List;
-
+import org.joda.time.DateTime;
 
 public interface AnomalyTimeSeriesView {
   /** Initializes this function with its configuration, call before getTimeSeriesView */
-  public void init(AnomalyFunctionDTO spec);
+  void init(AnomalyFunctionDTO spec);
 
-  public AnomalyFunctionDTO getSpec();
+  AnomalyFunctionDTO getSpec();
 
   /**
    * Returns the data range intervals for constructing the time series view. This method could returns multiple
@@ -24,7 +25,8 @@ public interface AnomalyTimeSeriesView {
    *
    * @return the data range intervals for constructing the time series view
    */
-  public List<Pair<Long, Long>> getDataRangeIntervals(long monitoringWindowStartTime, long monitoringWindowEndTime);
+  List<Pair<Long, Long>> getDataRangeIntervals(DateTime monitoringWindowStartTime,
+      DateTime monitoringWindowEndTime);
 
   /**
    * Given any metric, this method returns the corresponding current and baseline time series to be presented in the
@@ -44,11 +46,12 @@ public interface AnomalyTimeSeriesView {
    *
    * @param timeSeries the time series that contains the metric to be processed
    * @param metric the metric name to retrieve the data from the given time series
-   * @param bucketMillis the size of a bucket in milli-seconds
+   * @param timeGranularity the time granularity of the given time series
    * @param viewWindowStartTime the start time bucket of current time series, inclusive
    * @param viewWindowEndTime the end time buckets of current time series, exclusive
    * @return Two set of time series: a current and a baseline values, to be represented in the frontend
    */
-  public AnomalyTimelinesView getTimeSeriesView(MetricTimeSeries timeSeries, long bucketMillis, String metric,
-      long viewWindowStartTime, long viewWindowEndTime, List<RawAnomalyResultDTO> knownAnomalies);
+  AnomalyTimelinesView getTimeSeriesView(MetricTimeSeries timeSeries,
+      TimeGranularity timeGranularity, String metric, DateTime viewWindowStartTime,
+      DateTime viewWindowEndTime, List<RawAnomalyResultDTO> knownAnomalies);
 }

@@ -25,6 +25,7 @@ import com.linkedin.thirdeye.client.cache.QueryCache;
 import com.linkedin.thirdeye.client.timeseries.TimeSeriesRow.TimeSeriesMetric;
 import com.linkedin.thirdeye.dashboard.Utils;
 import com.linkedin.thirdeye.datalayer.bao.MetricConfigManager;
+import org.joda.time.Period;
 
 public class TimeSeriesHandler {
   private final QueryCache queryCache;
@@ -45,7 +46,7 @@ public class TimeSeriesHandler {
     DateTime end = timeSeriesRequest.getEnd();
     if (timeSeriesRequest.isEndDateInclusive()) {
       // ThirdEyeRequest is exclusive endpoint, so increment by one bucket
-      end = end.plus(aggregationTimeGranularity.toMillis());
+      end = TimeRangeUtils.increment(end, aggregationTimeGranularity);
     }
     timeranges = TimeRangeUtils.computeTimeRanges(aggregationTimeGranularity, start, end);
     // create request

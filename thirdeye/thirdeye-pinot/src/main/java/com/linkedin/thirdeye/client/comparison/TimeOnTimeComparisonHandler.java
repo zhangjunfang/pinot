@@ -50,8 +50,8 @@ public class TimeOnTimeComparisonHandler {
 
     if (comparisonRequest.isEndDateInclusive()) {
       // ThirdEyeRequest is exclusive endpoint, so increment end by one bucket
-      currentEnd = TimeRangeUtils.increment(currentEnd, aggregationTimeGranularity );
-      baselineEnd = TimeRangeUtils.increment(baselineEnd, aggregationTimeGranularity );
+      currentEnd = TimeRangeUtils.increment(currentEnd, aggregationTimeGranularity);
+      baselineEnd = TimeRangeUtils.increment(baselineEnd, aggregationTimeGranularity);
     }
     baselineTimeranges =
         TimeRangeUtils.computeTimeRanges(aggregationTimeGranularity, baselineStart, baselineEnd);

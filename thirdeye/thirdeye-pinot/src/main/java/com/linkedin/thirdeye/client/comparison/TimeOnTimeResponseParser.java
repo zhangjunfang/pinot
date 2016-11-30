@@ -72,7 +72,16 @@ public class TimeOnTimeResponseParser {
 
     metricFunctions = baselineResponse.getMetricFunctions();
     numMetrics = metricFunctions.size();
-    numTimeBuckets = baselineRanges.size();
+
+    // The case in which the sizes of currentRanges and baselineRanges are different happens when
+    // one of the time series contains the day when DST takes effect. For instance, the # of
+    // buckets during 2016/11/06 01:00 -- 2016/11/07 00:00 is 24, but that
+    //         during 2016/10/30 01:00 -- 2016/10/31 00:00 is 23.
+    // The root cause for this issue is that ThirdEye frontend takes as input localtime in Simple
+    // Date Format. Afterwards, it converts the localtime of current and baseline values
+    // to timestamp. Consequently, the backend receives the unequal length time ranges.
+    numTimeBuckets = Math.min(currentRanges.size(), baselineRanges.size());
+
     rows = new ArrayList<>();
 
     if (hasGroupByTime) {

@@ -31,6 +31,7 @@ import java.util.concurrent.ExecutionException;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.quartz.JobExecutionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -227,10 +228,13 @@ public abstract class TimeSeriesUtil {
     }
 
     Set<TimeSeriesRow> timeSeriesRowSet = new HashSet<>();
+    DateTimeZone timeZoneForCollection = Utils.getDataTimeZone(anomalyFunctionSpec.getCollection());
     // TODO : replace this with Pinot MultiQuery Request
     for (Pair<Long, Long> startEndInterval : startEndTimeRanges) {
-      DateTime startTime = new DateTime(startEndInterval.getFirst());
-      DateTime endTime = new DateTime(startEndInterval.getSecond());
+      // See {@link #getDashboardData} for the reason that the start and end time are stored in a
+      // DateTime object with data's timezone.
+      DateTime startTime = new DateTime(startEndInterval.getFirst(), timeZoneForCollection);
+      DateTime endTime = new DateTime(startEndInterval.getSecond(), timeZoneForCollection);
       request.setStart(startTime);
       request.setEnd(endTime);
 

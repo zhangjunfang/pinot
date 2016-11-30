@@ -8,6 +8,7 @@ import com.linkedin.thirdeye.anomaly.views.function.AnomalyTimeSeriesView;
 import com.linkedin.thirdeye.anomaly.views.function.AnomalyTimeSeriesViewFactory;
 import com.linkedin.thirdeye.api.DimensionMap;
 import com.linkedin.thirdeye.api.MetricTimeSeries;
+import com.linkedin.thirdeye.client.TimeRangeUtils;
 import com.linkedin.thirdeye.dashboard.Utils;
 import com.linkedin.thirdeye.dashboard.views.TimeBucket;
 
@@ -37,6 +38,8 @@ import javax.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.text.StrSubstitutor;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+import org.joda.time.Period;
 import org.joda.time.format.ISODateTimeFormat;
 import org.json.JSONObject;
 import org.quartz.CronExpression;
@@ -578,20 +581,23 @@ public class AnomalyResource {
       }
     }
 
+    DateTimeZone dataTimeZone = Utils.getDataTimeZone(anomalyFunctionSpec.getCollection());
+    DateTime viewWindowStartDateTime = new DateTime(viewWindowStartTime, dataTimeZone);
+    DateTime viewWindowEndDateTime = new DateTime(viewWindowEndTime, dataTimeZone);
+
     TimeGranularity timeGranularity =
         Utils.getAggregationTimeGranularity(aggTimeGranularity, anomalyFunctionSpec.getCollection());
-    long bucketMillis = timeGranularity.toMillis();
     // ThirdEye backend is end time exclusive, so one more bucket is appended to make end time inclusive for frontend.
-    viewWindowEndTime += bucketMillis;
+    viewWindowEndDateTime = TimeRangeUtils.increment(viewWindowEndDateTime, timeGranularity);
 
     long maxDataTime = collectionMaxDataTimeCache.get(anomalyResult.getCollection());
-    if (viewWindowEndTime > maxDataTime) {
-      viewWindowEndTime =
-          (anomalyResult.getEndTime() > maxDataTime) ? anomalyResult.getEndTime() : maxDataTime;
+    if (viewWindowEndDateTime.getMillis() > maxDataTime) {
+      viewWindowEndDateTime = new DateTime(
+          (anomalyResult.getEndTime() > maxDataTime) ? anomalyResult.getEndTime() : maxDataTime);
     }
 
     List<Pair<Long, Long>> startEndTimeRanges =
-        anomalyTimeSeriesView.getDataRangeIntervals(viewWindowStartTime, viewWindowEndTime);
+        anomalyTimeSeriesView.getDataRangeIntervals(viewWindowStartDateTime, viewWindowEndDateTime);
 
     MetricTimeSeries metricTimeSeries =
         TimeSeriesUtil.getTimeSeriesByDimension(anomalyFunctionSpec, startEndTimeRanges, dimensions, timeGranularity);
@@ -604,9 +610,9 @@ public class AnomalyResource {
 
     // Known anomalies are ignored (the null parameter) because 1. we can reduce users' waiting time and 2. presentation
     // data does not need to be as accurate as the one used for detecting anomalies
-    AnomalyTimelinesView anomalyTimelinesView =
-        anomalyTimeSeriesView.getTimeSeriesView(metricTimeSeries, bucketMillis, anomalyFunctionSpec.getMetric(),
-            viewWindowStartTime, viewWindowEndTime, null);
+    AnomalyTimelinesView anomalyTimelinesView = anomalyTimeSeriesView
+        .getTimeSeriesView(metricTimeSeries, timeGranularity, anomalyFunctionSpec.getMetric(),
+            viewWindowStartDateTime, viewWindowEndDateTime, null);
 
     // Generate summary for frontend
     List<TimeBucket> timeBuckets = anomalyTimelinesView.getTimeBuckets();
