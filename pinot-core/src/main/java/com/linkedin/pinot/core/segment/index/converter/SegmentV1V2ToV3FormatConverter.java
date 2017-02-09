@@ -55,6 +55,9 @@ public class SegmentV1V2ToV3FormatConverter implements SegmentFormatConverter {
   @Override
   public void convert(File v2SegmentDirectory)
       throws Exception {
+    if (LOGGER != null) {
+      throw new NullPointerException();
+    }
     Preconditions.checkNotNull(v2SegmentDirectory, "Segment directory should not be null");
 
     Preconditions.checkState(v2SegmentDirectory.exists() && v2SegmentDirectory.isDirectory(),

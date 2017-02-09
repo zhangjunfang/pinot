@@ -127,6 +127,9 @@ public abstract class SegmentDirectory implements AutoCloseable {
    * Reader for columnar index buffers from segment directory
    */
   public abstract class Reader implements AutoCloseable {
+    public File getSegmentDirectory() {
+      return null;
+    }
 
     /**
      * Get columnar index data buffer.

@@ -95,7 +95,7 @@ public class TableViewsTest extends ControllerTest {
         "smallest");
     request = ControllerRequestBuilder.buildCreateRealtimeTableJSON(TABLE_NAME, "default", "default",
         "potato", "DAYS", "DAYS", "5", 2, "BalanceNumSegmentAssignmentStrategy", metadata, "fakeSchema", "fakeColumn",
-        Collections.<String>emptyList(), "MMAP", true);
+        Collections.<String>emptyList(), "MMAP", true, null);
     sendPostRequest(ControllerRequestURLBuilder.baseUrl(CONTROLLER_BASE_API_URL).forTableCreate(),
         request.toString());
   }

@@ -13,22 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.linkedin.pinot.core.common;
 
-import com.clearspring.analytics.stream.membership.BloomFilter;
-import com.linkedin.pinot.core.operator.BaseOperator;
-import com.linkedin.pinot.core.segment.index.readers.InvertedIndexReader;
-import com.linkedin.pinot.core.segment.index.readers.Dictionary;
+package com.linkedin.pinot.core.data.filter;
 
-public abstract class DataSource extends BaseOperator {
+import com.linkedin.pinot.core.data.GenericRow;
 
-  public abstract boolean setPredicate(Predicate predicate);
 
-  public abstract DataSourceMetadata getDataSourceMetadata();
-
-  public abstract InvertedIndexReader getInvertedIndex();
-
-  public abstract Dictionary getDictionary();
-
-  public abstract BloomFilter getBloomFilter();
+/**
+ * Filter for generic rows.
+ */
+public interface GenericRowFilter {
+  GenericRow filter(GenericRow genericRow);
+  void close();
 }

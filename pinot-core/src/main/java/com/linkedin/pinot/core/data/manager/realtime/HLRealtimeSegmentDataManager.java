@@ -169,7 +169,7 @@ public class HLRealtimeSegmentDataManager extends SegmentDataManager {
     realtimeSegment =
         new RealtimeSegmentImpl(schema, kafkaStreamProviderConfig.getSizeThresholdToFlushSegment(), tableName,
             segmentMetadata.getSegmentName(), kafkaStreamProviderConfig.getStreamName(), serverMetrics,
-            this.invertedIndexColumns, indexLoadingConfig.getRealtimeAvgMultiValueCount());
+            this.invertedIndexColumns, indexLoadingConfig.getRealtimeAvgMultiValueCount(), null);
     realtimeSegment.setSegmentMetadata(segmentMetadata, this.schema);
     notifier = realtimeTableDataManager;
 

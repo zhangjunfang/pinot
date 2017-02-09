@@ -567,7 +567,9 @@ public class SegmentIndexCreationDriverImpl implements SegmentIndexCreationDrive
               segmentStats.getColumnProfileFor(column).getPartitionFunction(),
               segmentStats.getColumnProfileFor(column).getNumPartitions(),
               segmentStats.getColumnProfileFor(column).getPartitionRanges(),
-              dataSchema.getFieldSpecFor(column).getDefaultNullValue()));
+              dataSchema.getFieldSpecFor(column).getDefaultNullValue(),
+              column.equals("key") // TODO jfim: Pass this along correctly
+          ));
     }
     segmentIndexCreationInfo.setTotalDocs(totalDocs);
     segmentIndexCreationInfo.setTotalRawDocs(totalRawDocs);

@@ -99,7 +99,7 @@ public class SegmentCompletionIntegrationTests extends RealtimeClusterIntegratio
     // Call into the super class method
     addLLCRealtimeTable(tableName, timeColumnName, timeColumnType, -1, "", KafkaStarterUtils.DEFAULT_KAFKA_BROKER,
         kafkaTopic, schema.getSchemaName(), null, null, avroFile, ROW_COUNT_FOR_REALTIME_SEGMENT_FLUSH, "Carrier",
-        Collections.<String>emptyList(), "mmap");
+        Collections.<String>emptyList(), "mmap", null);
   }
 
   private void addRealtimeTable() throws Exception {

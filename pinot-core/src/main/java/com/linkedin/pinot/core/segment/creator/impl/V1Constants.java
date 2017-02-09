@@ -151,6 +151,7 @@ public class V1Constants {
       public static final String IS_SORTED = "isSorted";
       public static final String HAS_NULL_VALUE = "hasNullValue";
       public static final String HAS_DICTIONARY = "hasDictionary";
+      public static final String HAS_BLOOM_FILTER = "hasBloomFilter";
       public static final String HAS_INVERTED_INDEX = "hasInvertedIndex";
       public static final String IS_SINGLE_VALUED = "isSingleValues";
       public static final String MAX_MULTI_VALUE_ELEMTS = "maxNumberOfMultiValues";

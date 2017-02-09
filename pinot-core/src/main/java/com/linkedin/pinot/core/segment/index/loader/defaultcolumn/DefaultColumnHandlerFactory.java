@@ -28,10 +28,10 @@ public class DefaultColumnHandlerFactory {
 
   public static DefaultColumnHandler getDefaultColumnHandler(File indexDir, Schema schema,
       SegmentMetadataImpl segmentMetadata, SegmentDirectory.Writer segmentWriter) {
-    if (SegmentVersion.valueOf(segmentMetadata.getVersion()) == SegmentVersion.v3) {
+/*    if (SegmentVersion.valueOf(segmentMetadata.getVersion()) == SegmentVersion.v3) {
       return new V3DefaultColumnHandler(indexDir, schema, segmentMetadata, segmentWriter);
-    } else {
+    } else { */
       return new V1DefaultColumnHandler(indexDir, schema, segmentMetadata);
-    }
+//    }
   }
 }

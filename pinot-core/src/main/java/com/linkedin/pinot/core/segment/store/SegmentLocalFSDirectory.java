@@ -308,6 +308,11 @@ class SegmentLocalFSDirectory extends SegmentDirectory {
 
   /***************************  SegmentDirectory Reader *********************/
   public class Reader extends SegmentDirectory.Reader {
+    // TODO jfim Get rid of this
+    @Override
+    public File getSegmentDirectory() {
+      return segmentDirectory;
+    }
 
     @Override
     public PinotDataBuffer getIndexFor(String column, ColumnIndexType type)

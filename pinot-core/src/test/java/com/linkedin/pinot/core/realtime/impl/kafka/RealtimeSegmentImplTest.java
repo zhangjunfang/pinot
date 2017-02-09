@@ -49,7 +49,7 @@ public class RealtimeSegmentImplTest {
         .build();
 
     RealtimeSegmentImpl realtimeSegment = createRealtimeSegmentImpl(schema, 100, "noTable", "noSegment",
-        schema.getSchemaName(), new ServerMetrics(new MetricsRegistry()));
+        schema.getSchemaName(), new ServerMetrics(new MetricsRegistry()), null);
 
     // Segment should be empty
     Assert.assertEquals(realtimeSegment.getRawDocumentCount(), 0);

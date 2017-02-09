@@ -15,6 +15,7 @@
  */
 package com.linkedin.pinot.core.segment.index.column;
 
+import com.clearspring.analytics.stream.membership.BloomFilter;
 import com.linkedin.pinot.core.io.reader.DataFileReader;
 import com.linkedin.pinot.core.io.reader.impl.FixedByteSingleValueMultiColReader;
 import com.linkedin.pinot.core.io.reader.impl.SortedForwardIndexReader;
@@ -32,14 +33,17 @@ public class SortedSVColumnIndexContainer extends ColumnIndexContainer {
   private final ImmutableDictionaryReader dictionaryReader;
   private final InvertedIndexReader invertedIndexReader;
   private final SortedForwardIndexReader forwardIndexReader;
+  private final BloomFilter bloomFilter;
 
   public SortedSVColumnIndexContainer(String column, ColumnMetadata columnMetadata,
-      FixedByteSingleValueMultiColReader indexFileReader, ImmutableDictionaryReader dictionaryReader) {
+      FixedByteSingleValueMultiColReader indexFileReader, ImmutableDictionaryReader dictionaryReader,
+      BloomFilter bloomFilter) {
     this.column = column;
     this.columnMetadata = columnMetadata;
     this.indexFileReader = indexFileReader;
     this.dictionaryReader = dictionaryReader;
     this.invertedIndexReader = new SortedInvertedIndexReader(indexFileReader);
+    this.bloomFilter = bloomFilter;
     this.forwardIndexReader = new SortedForwardIndexReader(indexFileReader, columnMetadata.getTotalDocs());
   }
 
@@ -76,4 +80,8 @@ public class SortedSVColumnIndexContainer extends ColumnIndexContainer {
     return true;
   }
 
+  @Override
+  public BloomFilter getBloomFilter() {
+    return bloomFilter;
+  }
 }

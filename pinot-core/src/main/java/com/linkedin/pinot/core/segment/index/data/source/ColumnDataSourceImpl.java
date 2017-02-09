@@ -15,6 +15,7 @@
  */
 package com.linkedin.pinot.core.segment.index.data.source;
 
+import com.clearspring.analytics.stream.membership.BloomFilter;
 import com.linkedin.pinot.core.segment.index.ColumnMetadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -162,5 +163,10 @@ public class ColumnDataSourceImpl extends DataSource {
   @Override
   public Dictionary getDictionary() {
     return indexContainer.getDictionary();
+  }
+
+  @Override
+  public BloomFilter getBloomFilter() {
+    return indexContainer.getBloomFilter();
   }
 }

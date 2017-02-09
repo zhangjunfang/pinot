@@ -90,6 +90,7 @@ public class RealtimeSegmentTest {
         invertedIdxCols, 2);
     segmentWithoutInvIdx = RealtimeSegmentImplTest.createRealtimeSegmentImpl(schema, 100000, tableName, "noSegment",
         AVRO_DATA, new ServerMetrics(new MetricsRegistry()));
+        invertedIdxCols, null, null);
     GenericRow row = provider.next(new GenericRow());
     while (row != null) {
       segmentWithInvIdx.index(row);

@@ -98,9 +98,11 @@ public class RealtimeSegmentImpl implements RealtimeSegment {
   private final String tableAndStreamName;
   private StarTreeIndexSpec starTreeIndexSpec = null;
   private SegmentPartitionConfig segmentPartitionConfig = null;
+  private final String keyColumn;
+  private final BloomFilter bloomFilter;
 
   public RealtimeSegmentImpl(Schema schema, int capacity, String tableName, String segmentName, String streamName,
-      ServerMetrics serverMetrics, List<String> invertedIndexColumns, int avgMultiValueCount)
+      ServerMetrics serverMetrics, List<String> invertedIndexColumns, int avgMultiValueCount, String keyColumn)
       throws IOException {
     // initial variable setup
     this.segmentName = segmentName;
@@ -168,6 +170,14 @@ public class RealtimeSegmentImpl implements RealtimeSegment {
         new FixedByteSingleColumnSingleValueReaderWriter(capacity, V1Constants.Dict.INT_DICTIONARY_COL_SIZE));
 
     tableAndStreamName = tableName + "-" + streamName;
+
+    if (keyColumn != null && !keyColumn.isEmpty() && schema.hasColumn(keyColumn)) {
+      this.keyColumn = keyColumn;
+      bloomFilter = new BloomFilter(capacity, 1.0 / capacity);
+    } else {
+      this.keyColumn = null;
+      bloomFilter = null;
+    }
   }
 
   @Override
@@ -227,6 +237,16 @@ public class RealtimeSegmentImpl implements RealtimeSegment {
       LOGGER.warn("Dropping invalid row {} with null values for column(s) {}", row, invalidColumns);
       serverMetrics.addMeteredTableValue(tableAndStreamName, ServerMeter.INVALID_REALTIME_ROWS_DROPPED, 1L);
       return true;
+    }
+
+    if (bloomFilter != null) {
+      Object keyValue = row.getValue(keyColumn);
+      if (keyValue instanceof Integer) {
+        bloomFilter.add(Ints.toByteArray((Integer) keyValue));
+      } else {
+        // TODO jfim: Add other types
+        throw new RuntimeException("Unimplemented!");
+      }
     }
 
     // updating dictionary for dimensions only
@@ -364,12 +384,12 @@ public class RealtimeSegmentImpl implements RealtimeSegment {
 
     if (fieldSpec.getFieldType() == FieldType.METRIC) {
       return new RealtimeColumnDataSource(fieldSpec, columnIndexReaderWriterMap.get(columnName),
-          invertedIndexMap.get(columnName), docIdSearchableOffset, -1, dataSchema, dictionaryMap.get(columnName));
+          invertedIndexMap.get(columnName), docIdSearchableOffset, -1, dataSchema, dictionaryMap.get(columnName), bloomFilter);
     }
 
     return new RealtimeColumnDataSource(fieldSpec, columnIndexReaderWriterMap.get(columnName),
         invertedIndexMap.get(columnName), docIdSearchableOffset, maxNumberOfMultivaluesMap.get(columnName), dataSchema,
-        dictionaryMap.get(columnName));
+        dictionaryMap.get(columnName), bloomFilter);
   }
 
   public DataSource getDataSource(String columnName, Predicate p) {

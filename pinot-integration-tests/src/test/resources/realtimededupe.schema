@@ -1,0 +1,28 @@
+{
+  "metricFieldSpecs": [
+    {
+      "dataType": "INT",
+      "name": "myMetric"
+    }
+  ],
+  "dimensionFieldSpecs": [
+    {
+      "dataType": "INT",
+      "name": "key",
+      "singleValueField": true
+    },
+    {
+      "dataType": "INT",
+      "name": "myDimension",
+      "singleValueField": true
+    }
+  ],
+  "timeFieldSpec": {
+    "incomingGranularitySpec": {
+      "dataType": "INT",
+      "timeType": "MILLISECONDS",
+      "name": "time"
+    }
+  },
+  "schemaName": "realtimeDedupeTest"
+}

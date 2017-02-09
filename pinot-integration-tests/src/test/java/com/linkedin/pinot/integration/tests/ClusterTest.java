@@ -256,7 +256,7 @@ public abstract class ClusterTest extends ControllerTest {
     AvroFileSchemaKafkaAvroMessageDecoder.avroFile = avroFile;
     JSONObject request = ControllerRequestBuilder.buildCreateRealtimeTableJSON(tableName, serverTenant, brokerTenant,
         timeColumnName, timeColumnType, retentionTimeUnit, Integer.toString(retentionDays), 1,
-        "BalanceNumSegmentAssignmentStrategy", streamConfig, schemaName, sortedColumn, invertedIndexColumns, null, true);
+        "BalanceNumSegmentAssignmentStrategy", streamConfig, schemaName, sortedColumn, invertedIndexColumns, null, true, null);
     sendPostRequest(ControllerRequestURLBuilder.baseUrl(CONTROLLER_BASE_API_URL).forTableCreate(), request.toString());
   }
 
@@ -275,7 +275,7 @@ public abstract class ClusterTest extends ControllerTest {
       String retentionTimeUnit, String kafkaBrokerList, String kafkaTopic, String schemaName, String serverTenant,
       String brokerTenant, File avroFile, int realtimeSegmentFlushSize, String sortedColumn,
       List<String> invertedIndexColumns, String loadMode, List<String> noDictionaryColumns,
-      Map<String, String> partitioner)
+      Map<String, String> partitioner, String keyColumn)
           throws Exception {
     JSONObject metadata = new JSONObject();
     metadata.put("streamType", "kafka");
@@ -293,7 +293,7 @@ public abstract class ClusterTest extends ControllerTest {
     JSONObject request = ControllerRequestBuilder.buildCreateRealtimeTableJSON(tableName, serverTenant, brokerTenant,
         timeColumnName, timeColumnType, retentionTimeUnit, Integer.toString(retentionDays), 1,
         "BalanceNumSegmentAssignmentStrategy", metadata, schemaName, sortedColumn, invertedIndexColumns, null, false,
-        noDictionaryColumns, partitioner);
+        noDictionaryColumns, partitioner, keyColumn);
     sendPostRequest(ControllerRequestURLBuilder.baseUrl(CONTROLLER_BASE_API_URL).forTableCreate(), request.toString());
   }
 
@@ -305,7 +305,7 @@ public abstract class ClusterTest extends ControllerTest {
     if (useLlc) {
       addLLCRealtimeTable(tableName, timeColumnName, timeColumnType, retentionDays, retentionTimeUnit, KafkaStarterUtils.DEFAULT_KAFKA_BROKER,
           kafkaTopic, schemaName, serverTenant, brokerTenant, avroFile, getRealtimeSegmentFlushSize(useLlc),
-          sortedColumn, invertedIndexColumns, loadMode);
+          sortedColumn, invertedIndexColumns, loadMode, null);
     } else {
       addRealtimeTable(tableName, timeColumnName, timeColumnType, retentionDays, retentionTimeUnit, kafkaZkUrl,
           kafkaTopic, schemaName, serverTenant, brokerTenant, avroFile, getRealtimeSegmentFlushSize(useLlc),

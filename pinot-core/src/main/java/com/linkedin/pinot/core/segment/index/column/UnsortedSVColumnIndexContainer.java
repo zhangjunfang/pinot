@@ -15,6 +15,7 @@
  */
 package com.linkedin.pinot.core.segment.index.column;
 
+import com.clearspring.analytics.stream.membership.BloomFilter;
 import com.linkedin.pinot.core.segment.index.readers.BitmapInvertedIndexReader;
 import com.linkedin.pinot.core.io.reader.DataFileReader;
 import com.linkedin.pinot.core.io.reader.SingleColumnSingleValueReader;
@@ -24,26 +25,22 @@ import com.linkedin.pinot.core.segment.index.readers.ImmutableDictionaryReader;
 
 
 public class UnsortedSVColumnIndexContainer extends ColumnIndexContainer {
-
   private final String column;
   private final ColumnMetadata columnMetadata;
   private final SingleColumnSingleValueReader indexReader;
   private final ImmutableDictionaryReader dictionary;
   private final BitmapInvertedIndexReader invertedIndexReader;
-
-  public UnsortedSVColumnIndexContainer(String column, ColumnMetadata columnMetadata,
-      SingleColumnSingleValueReader indexReader, ImmutableDictionaryReader dictionary) {
-    this(column, columnMetadata, indexReader, dictionary, null);
-  }
+  private final BloomFilter bloomFilter;
 
   public UnsortedSVColumnIndexContainer(String column, ColumnMetadata columnMetadata,
       SingleColumnSingleValueReader indexReader, ImmutableDictionaryReader dictionary,
-      BitmapInvertedIndexReader invertedIndex) {
+      BitmapInvertedIndexReader invertedIndex, BloomFilter bloomFilter) {
     this.column = column;
     this.columnMetadata = columnMetadata;
     this.indexReader = indexReader;
     this.dictionary = dictionary;
     this.invertedIndexReader = invertedIndex;
+    this.bloomFilter = bloomFilter;
   }
 
   @Override
@@ -79,5 +76,10 @@ public class UnsortedSVColumnIndexContainer extends ColumnIndexContainer {
       invertedIndexReader.close();
     }
     return true;
+  }
+
+  @Override
+  public BloomFilter getBloomFilter() {
+    return bloomFilter;
   }
 }

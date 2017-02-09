@@ -39,6 +39,7 @@ public class IndexingConfig {
   private Map<String, String> _streamConfigs = new HashMap<>();
   private String _segmentFormatVersion;
   private String _starTreeFormat;
+  private String _keyColumn;
   private String _columnMinMaxValueGeneratorMode;
   private List<String> _noDictionaryColumns;
   private StarTreeIndexSpec _starTreeIndexSpec;
@@ -171,5 +172,13 @@ public class IndexingConfig {
     result.append("}");
 
     return result.toString();
+  }
+
+  public String getKeyColumn() {
+    return _keyColumn;
+  }
+
+  public void setKeyColumn(String keyColumn) {
+    _keyColumn = keyColumn;
   }
 }

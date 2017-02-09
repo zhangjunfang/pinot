@@ -15,6 +15,7 @@
  */
 package com.linkedin.pinot.integration.tests;
 
+import com.google.common.primitives.Ints;
 import com.google.common.base.Function;
 import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.AsyncFunction;

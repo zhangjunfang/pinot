@@ -15,6 +15,9 @@
  */
 package com.linkedin.pinot.core.realtime.impl.datasource;
 
+import com.clearspring.analytics.stream.membership.BloomFilter;
+import org.roaringbitmap.buffer.MutableRoaringBitmap;
+
 import com.linkedin.pinot.common.data.FieldSpec;
 import com.linkedin.pinot.common.data.FieldSpec.DataType;
 import com.linkedin.pinot.common.data.FieldSpec.FieldType;
@@ -53,15 +56,18 @@ public class RealtimeColumnDataSource extends DataSource {
   private final int offset;
   private final int maxNumberOfMultiValues;
   private final BaseOnHeapMutableDictionary dictionary;
+  private final BloomFilter bloomFilter;
 
   public RealtimeColumnDataSource(FieldSpec spec, DataFileReader indexReader, RealtimeInvertedIndex invertedIndex,
-      int searchOffset, int maxNumberOfMultivalues, Schema schema, BaseOnHeapMutableDictionary dictionary) {
+      int searchOffset, int maxNumberOfMultivalues, Schema schema, BaseOnHeapMutableDictionary dictionary,
+      BloomFilter bloomFilter) {
     this.fieldSpec = spec;
     this.indexReader = indexReader;
     this.invertedIndex = invertedIndex;
     this.offset = searchOffset;
     this.maxNumberOfMultiValues = maxNumberOfMultivalues;
     this.dictionary = dictionary;
+    this.bloomFilter = bloomFilter;
   }
 
   @Override
@@ -190,5 +196,10 @@ public class RealtimeColumnDataSource extends DataSource {
   @Override
   public BaseOnHeapMutableDictionary getDictionary() {
     return dictionary;
+  }
+
+  @Override
+  public BloomFilter getBloomFilter() {
+    return bloomFilter;
   }
 }

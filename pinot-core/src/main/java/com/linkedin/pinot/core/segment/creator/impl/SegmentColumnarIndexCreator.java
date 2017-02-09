@@ -15,6 +15,8 @@
  */
 package com.linkedin.pinot.core.segment.creator.impl;
 
+import com.clearspring.analytics.stream.membership.BloomFilter;
+import com.google.common.primitives.Ints;
 import com.linkedin.pinot.common.data.FieldSpec;
 import com.linkedin.pinot.common.data.Schema;
 import com.linkedin.pinot.common.data.StarTreeIndexSpec;
@@ -37,7 +39,9 @@ import com.linkedin.pinot.core.segment.creator.impl.fwd.SingleValueUnsortedForwa
 import com.linkedin.pinot.core.segment.creator.impl.fwd.SingleValueVarByteRawIndexCreator;
 import com.linkedin.pinot.core.segment.creator.impl.inv.OffHeapBitmapInvertedIndexCreator;
 import com.linkedin.pinot.core.startree.hll.HllConfig;
+import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -81,6 +85,7 @@ public class SegmentColumnarIndexCreator implements SegmentCreator {
   private int docIdCounter;
   private char paddingCharacter;
   private Map<String, Map<Object, Object>> dictionaryCache = new HashMap<String, Map<Object, Object>>();
+  private BloomFilter bloomFilter;
 
   @Override
   public void init(SegmentGeneratorConfig segmentCreationSpec, SegmentIndexCreationInfo segmentIndexCreationInfo,
@@ -111,6 +116,9 @@ public class SegmentColumnarIndexCreator implements SegmentCreator {
     this.totalConversions = segmentIndexCreationInfo.getTotalConversions();
     this.totalNullCols = segmentIndexCreationInfo.getTotalNullCols();
     this.paddingCharacter = segmentCreationSpec.getPaddingCharacter();
+
+    // TODO jfim: This should really be a per-column thing
+    bloomFilter = new BloomFilter(totalRawDocs, 0.0); //1.0 / totalRawDocs);
 
     // Initialize and build dictionaries
     for (final FieldSpec spec : schema.getAllFieldSpecs()) {
@@ -250,6 +258,16 @@ public class SegmentColumnarIndexCreator implements SegmentCreator {
             if (invertedIndexCreatorMap.containsKey(column)) {
               invertedIndexCreatorMap.get(column).add(docIdCounter, dictionaryIndex);
             }
+
+            // TODO jfim Refactor this? Probably also rename "isGenerateBloomFilter"
+            if (indexCreationInfoMap.get(column).isGenerateBloomFilter()) {
+              if (columnValueToIndex instanceof Integer) {
+                bloomFilter.add(Ints.toByteArray((Integer) columnValueToIndex));
+              } else {
+                // TODO jfim Implement other types
+                throw new RuntimeException("Unimplemented!");
+              }
+            }
           } else {
             ((SingleValueRawIndexCreator) forwardIndexCreatorMap.get(column)).index(docIdCounter, columnValueToIndex);
           }
@@ -288,6 +306,12 @@ public class SegmentColumnarIndexCreator implements SegmentCreator {
     for (final String invertedColumn : invertedIndexCreatorMap.keySet()) {
       invertedIndexCreatorMap.get(invertedColumn).seal();
     }
+
+    // TODO jfim Make this a per-column thing
+    FileOutputStream bloomFilterStream = new FileOutputStream(new File(file, "bloomfilter"));
+    bloomFilterStream.write(BloomFilter.serialize(bloomFilter));
+    bloomFilterStream.close();
+
     writeMetadata();
   }
 
@@ -375,7 +399,9 @@ public class SegmentColumnarIndexCreator implements SegmentCreator {
 
       addColumnMetadataInfo(properties, column, columnIndexCreationInfo, totalDocs, totalRawDocs, totalAggDocs,
           schema.getFieldSpecFor(column), dictionaryCreatorMap.containsKey(column), dictionaryElementSize,
-          hasInvertedIndex, hllOriginColumn);
+          hasInvertedIndex, hllOriginColumn,
+          column.equals("key") // TODO jfim: Pass this properly
+      );
     }
 
     properties.save();
@@ -384,7 +410,7 @@ public class SegmentColumnarIndexCreator implements SegmentCreator {
   public static void addColumnMetadataInfo(PropertiesConfiguration properties, String column,
       ColumnIndexCreationInfo columnIndexCreationInfo, int totalDocs, int totalRawDocs,
       int totalAggDocs, FieldSpec fieldSpec, boolean hasDictionary, int dictionaryElementSize, boolean hasInvertedIndex,
-      String hllOriginColumn) {
+      String hllOriginColumn, boolean hasBloomFilter) {
     int distinctValueCount = columnIndexCreationInfo.getDistinctValueCount();
     properties.setProperty(getKeyFor(column, CARDINALITY), String.valueOf(distinctValueCount));
     properties.setProperty(getKeyFor(column, TOTAL_DOCS), String.valueOf(totalDocs));
@@ -397,8 +423,8 @@ public class SegmentColumnarIndexCreator implements SegmentCreator {
     properties.setProperty(getKeyFor(column, COLUMN_TYPE), String.valueOf(fieldSpec.getFieldType()));
     properties.setProperty(getKeyFor(column, IS_SORTED), String.valueOf(columnIndexCreationInfo.isSorted()));
     properties.setProperty(getKeyFor(column, HAS_NULL_VALUE), String.valueOf(columnIndexCreationInfo.hasNulls()));
-    properties.setProperty(getKeyFor(column, HAS_DICTIONARY),
-        String.valueOf(hasDictionary));
+    properties.setProperty(getKeyFor(column, HAS_DICTIONARY), String.valueOf(hasDictionary));
+    properties.setProperty(getKeyFor(column, HAS_BLOOM_FILTER), String.valueOf(hasBloomFilter));
     properties.setProperty(V1Constants.MetadataKeys.Column.getKeyFor(column, HAS_INVERTED_INDEX),
         String.valueOf(hasInvertedIndex));
     properties.setProperty(V1Constants.MetadataKeys.Column.getKeyFor(column, IS_SINGLE_VALUED),

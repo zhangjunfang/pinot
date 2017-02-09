@@ -15,6 +15,7 @@
  */
 package com.linkedin.pinot.core.segment.index.column;
 
+import com.clearspring.analytics.stream.membership.BloomFilter;
 import com.linkedin.pinot.common.data.FieldSpec;
 import com.linkedin.pinot.core.io.compression.ChunkCompressorFactory;
 import com.linkedin.pinot.core.io.compression.ChunkDecompressor;
@@ -40,7 +41,11 @@ import com.linkedin.pinot.core.segment.index.readers.StringDictionary;
 import com.linkedin.pinot.core.segment.memory.PinotDataBuffer;
 import com.linkedin.pinot.core.segment.store.ColumnIndexType;
 import com.linkedin.pinot.core.segment.store.SegmentDirectory;
+import java.io.File;
 import java.io.IOException;
+import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class ColumnIndexContainer {
   public static ColumnIndexContainer init(SegmentDirectory.Reader segmentReader, ColumnMetadata metadata,
@@ -113,7 +118,7 @@ public abstract class ColumnIndexContainer {
     }
 
     return new UnsortedSVColumnIndexContainer(column, metadata, fwdIndexReader, dictionary,
-        invertedIndex);
+        invertedIndex, loadBloomFilter(column, metadata, segmentReader));
   }
 
   private static ColumnIndexContainer loadSorted(String column, SegmentDirectory.Reader segmentReader, ColumnMetadata metadata,
@@ -124,7 +129,24 @@ public abstract class ColumnIndexContainer {
         dataBuffer, metadata.getCardinality(), 2, new int[] {
         4, 4
     });
-    return new SortedSVColumnIndexContainer(column, metadata, indexReader, dictionary);
+
+    return new SortedSVColumnIndexContainer(column, metadata, indexReader, dictionary, loadBloomFilter(column, metadata, segmentReader));
+  }
+
+  private static BloomFilter loadBloomFilter(String column, ColumnMetadata metadata, SegmentDirectory.Reader segmentReader) {
+    File directory = segmentReader.getSegmentDirectory();
+    File bloomFilterFile = new File(directory, "bloomfilter");
+    System.out.println("bloomFilterFile = " + bloomFilterFile.getAbsolutePath());
+
+    if (bloomFilterFile.exists()) {
+      try {
+        return BloomFilter.deserialize(FileUtils.readFileToByteArray(bloomFilterFile));
+      } catch (IOException e) {
+        LOGGER.warn("Failed to load bloom filter", e);
+        return null;
+      }
+    }
+    return null;
   }
 
   private static ImmutableDictionaryReader load(ColumnMetadata metadata, PinotDataBuffer dictionaryBuffer) {
@@ -196,6 +218,10 @@ public abstract class ColumnIndexContainer {
    * @return
    */
   public abstract ColumnMetadata getColumnMetadata();
+
+  public BloomFilter getBloomFilter() {
+    return null;
+  }
 
   /**
    * @return
