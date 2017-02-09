@@ -119,6 +119,7 @@ public class DictionaryGenericRowFilter implements GenericRowFilter {
       dictionaryTests++;
       if (0 <= dictionary.indexOf(keyValue)) {
         dictionaryHits++;
+        System.out.println("Discarding keyValue = " + keyValue);
         // Yes, discard row
         return null;
       }

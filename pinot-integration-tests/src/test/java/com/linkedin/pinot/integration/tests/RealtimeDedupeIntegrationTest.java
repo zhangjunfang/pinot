@@ -87,7 +87,7 @@ public class RealtimeDedupeIntegrationTest extends RealtimeClusterIntegrationTes
     }
 
     // Put in a few duplicate records from this segment
-    for (int i = EXPECTED_RECORD_COUNT - 10; i < EXPECTED_RECORD_COUNT; i++) {
+    for (int i = EXPECTED_RECORD_COUNT - ROW_COUNT_FOR_REALTIME_SEGMENT_FLUSH - 10; i < EXPECTED_RECORD_COUNT - ROW_COUNT_FOR_REALTIME_SEGMENT_FLUSH; i++) {
       generateAndAppendRecord(avroSchema, dataFileWriter, i);
     }
 
