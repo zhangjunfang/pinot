@@ -16,11 +16,15 @@
 package com.linkedin.pinot.tools;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Set;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.helix.ZNRecord;
 import org.apache.helix.controller.strategy.AutoRebalanceStrategy;
 import org.apache.helix.model.ExternalView;
@@ -167,6 +171,7 @@ public class PinotSegmentRebalancer extends PinotZKChanger {
     Map<String, Map<String, String>> currentMapping = currentIdealState.getRecord().getMapFields();
     ZNRecord newZnRecord = rebalanceStrategy
         .computePartitionAssignment(instancesInClusterWithTag, currentMapping, instancesInClusterWithTag);
+    backfillMissingOnlineReplicas(newZnRecord, targetNumReplicas);
     final Map<String, Map<String, String>> newMapping = newZnRecord.getMapFields();
     LOGGER.info("Current segment Assignment:");
     printSegmentAssignment(currentMapping);
@@ -194,6 +199,94 @@ public class PinotSegmentRebalancer extends PinotZKChanger {
         LOGGER.info("Successfully rebalanced table:" + tableName);
       }
     }
+  }
+
+  private void backfillMissingOnlineReplicas(ZNRecord znRecord, int desiredOnlineReplicaCount) {
+    // Get the current segment -> (server, state) mappings (this is not a copy, at least in Helix 0.6.5)
+    Map<String, Map<String, String>> currentMapping = znRecord.getMapFields();
+
+    Map<String, Integer> perServerSegmentCount = new HashMap<>();
+
+    // Count segments per server
+    for (Map.Entry<String, Map<String, String>> entry : currentMapping.entrySet()) {
+      String segmentName = entry.getKey();
+
+      for (Map.Entry<String, String> serverAndState : entry.getValue().entrySet()) {
+        String server = serverAndState.getKey();
+        String state = serverAndState.getValue();
+
+        if (state.equals("ONLINE")) {
+          Integer serverSegmentCount = perServerSegmentCount.get(server);
+
+          if (serverSegmentCount == null) {
+            serverSegmentCount = 0;
+          }
+
+          perServerSegmentCount.put(server, serverSegmentCount + 1);
+        } else {
+          // Shouldn't happen, just ignore it
+          LOGGER.warn("State is not ONLINE for server {} and segment {}", server, segmentName);
+        }
+      }
+    }
+
+    // Order the servers in number of replicas
+    PriorityQueue<Pair<String, Integer>> serverQueue =
+        new PriorityQueue<>(perServerSegmentCount.size(), new Comparator<Pair<String, Integer>>() {
+          @Override
+          public int compare(Pair<String, Integer> o1, Pair<String, Integer> o2) {
+            return Integer.compare(o1.getValue(), o2.getValue());
+          }
+        });
+    for (Map.Entry<String, Integer> entry : perServerSegmentCount.entrySet()) {
+      serverQueue.add(Pair.of(entry.getKey(), entry.getValue()));
+    }
+
+    // Iterate over the segments and fill missing ONLINE entries
+    for (Map.Entry<String, Map<String, String>> entry : currentMapping.entrySet()) {
+      // Count number of servers in ONLINE state
+      int onlineServerCount = 0;
+      for (Map.Entry<String, String> serverAndState : entry.getValue().entrySet()) {
+        if (serverAndState.getValue().equals("ONLINE")) {
+          onlineServerCount++;
+        }
+      }
+
+      if (onlineServerCount < desiredOnlineReplicaCount) {
+        Set<String> serversInUse = new HashSet<>(entry.getValue().keySet());
+        List<Pair<String, Integer>> rejectedServers = new ArrayList<>();
+
+        // Add servers based on the queue
+        while(!serverQueue.isEmpty() && onlineServerCount < desiredOnlineReplicaCount) {
+          Pair<String, Integer> candidateServer = serverQueue.poll();
+          String serverName = candidateServer.getKey();
+
+          // If this server is already in the list of servers used, set it aside to add it later
+          if (serversInUse.contains(serverName)) {
+            rejectedServers.add(candidateServer);
+          } else {
+            // Add the server as ONLINE for this segment
+            entry.getValue().put(serverName, "ONLINE");
+
+            // Mark the server as in use and put it back into the queue with the incremented segment count
+            serversInUse.add(serverName);
+            serverQueue.add(Pair.of(serverName, candidateServer.getValue() + 1));
+
+            onlineServerCount++;
+          }
+        }
+
+        if (serverQueue.isEmpty()) {
+          LOGGER.warn("Ran out of replicas while trying to assign servers, this shouldn't happen.");
+        } else {
+          // Add all the rejected servers back into the queue
+          serverQueue.addAll(rejectedServers);
+        }
+      }
+    }
+
+    // This effectively does nothing, but in case Helix changes their API to return a copy, this will not break
+    znRecord.setMapFields(currentMapping);
   }
 
   private static void usage() {
