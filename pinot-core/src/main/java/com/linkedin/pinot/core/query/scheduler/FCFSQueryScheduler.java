@@ -55,7 +55,7 @@ public class FCFSQueryScheduler extends QueryScheduler {
   }
 
   @Override
-  public void run() {
+  public void start() {
     // no-op
   }
 }

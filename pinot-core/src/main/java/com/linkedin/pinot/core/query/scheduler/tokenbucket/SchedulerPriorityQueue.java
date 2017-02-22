@@ -17,8 +17,26 @@
 package com.linkedin.pinot.core.query.scheduler.tokenbucket;
 
 import com.linkedin.pinot.core.query.scheduler.SchedulerQueryContext;
+import javax.annotation.Nonnull;
+
 
 public interface SchedulerPriorityQueue {
-  void put(SchedulerQueryContext query);
-  SchedulerQueryContext take();
+  /**
+   * Adds a query to the scheduler priority queue
+   * @param query
+   */
+  void put(@Nonnull SchedulerQueryContext query);
+
+  /**
+   * Remove the query with highest priority for scheduling
+   * @return query to schedule
+   */
+  @Nonnull SchedulerQueryContext take();
+
+  /**
+   * Should be called after completion of the scheduled query to update
+   * any accounting information
+   * @param queryContext
+   */
+  void markTaskDone(@Nonnull SchedulerQueryContext queryContext);
 }

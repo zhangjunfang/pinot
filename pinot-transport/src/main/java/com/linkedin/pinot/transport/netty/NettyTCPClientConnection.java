@@ -394,7 +394,6 @@ public class NettyTCPClientConnection extends NettyClientConnection  {
       setSelfClose(true);
     }
   }
-
   /**
    * Timer task responsible for closing the connection on timeout
    *

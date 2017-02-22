@@ -56,4 +56,8 @@ public class SchedulerQueryContext {
   public @Nonnull ListenableFuture<byte[]> getQueryResultFuture() {
     return queryResultFuture;
   }
+
+  public int getMaxWorkerThreads() {
+    return 8;
+  }
 }

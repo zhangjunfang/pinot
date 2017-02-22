@@ -27,6 +27,10 @@ import com.linkedin.pinot.server.conf.ServerConf;
 import com.linkedin.pinot.transport.netty.NettyServer;
 import com.linkedin.pinot.transport.netty.NettyServer.RequestHandlerFactory;
 import com.yammer.metrics.core.MetricsRegistry;
+import java.lang.reflect.InvocationTargetException;
+import org.apache.commons.configuration.ConfigurationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -74,6 +78,7 @@ public class ServerInstance {
     LOGGER.info("Trying to build QueryExecutor");
     _queryExecutor = serverBuilder.buildQueryExecutor(_instanceDataManager);
     _queryScheduler = serverBuilder.buildQueryScheduler(_queryExecutor);
+    _queryScheduler.start();
 
     LOGGER.info("Trying to build RequestHandlerFactory");
     setRequestHandlerFactory(serverBuilder.buildRequestHandlerFactory(_queryScheduler));

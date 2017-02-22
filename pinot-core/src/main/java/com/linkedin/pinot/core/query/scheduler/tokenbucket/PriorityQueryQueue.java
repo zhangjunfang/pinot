@@ -16,12 +16,14 @@
 
 package com.linkedin.pinot.core.query.scheduler.tokenbucket;
 
+import com.google.common.base.Preconditions;
 import com.linkedin.pinot.core.query.scheduler.SchedulerQueryContext;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import javax.annotation.Nonnull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,29 +31,31 @@ import org.slf4j.LoggerFactory;
 public class PriorityQueryQueue implements SchedulerPriorityQueue {
 
   private static Logger LOGGER = LoggerFactory.getLogger(PriorityQueryQueue.class);
-  private static final int DEFAULT_TOKEN_REPLENISH_INTERVAL_MS = 100;
-  private static final int DEFAULT_TOKENS_PER_INTERVAL;
+  private static final int DEFAULT_TOKEN_LIFETIME_MS = 1000;
+  private static final int DEFAULT_TOKENS_PER_MS;
 
   private final Map<String, TableTokenAccount> tableSchedulerInfo = new HashMap<>();
 
   private final Lock queueLock = new ReentrantLock();
-  private final Condition queryReaderConditon = queueLock.newCondition();
+  private final Condition queryReaderCondition = queueLock.newCondition();
 
   static {
-    DEFAULT_TOKENS_PER_INTERVAL = Runtime.getRuntime().availableProcessors() * DEFAULT_TOKEN_REPLENISH_INTERVAL_MS;
+    DEFAULT_TOKENS_PER_MS = Runtime.getRuntime().availableProcessors() ;
   }
 
   @Override
-  public void put(SchedulerQueryContext query) {
-    String tableName = query.getQueryRequest().getInstanceRequest().getQuery().getQuerySource().getTableName();
+  public void put(@Nonnull SchedulerQueryContext query) {
+    Preconditions.checkNotNull(query);
+    String tableName = query.getQueryRequest().getTableName();
+    queueLock.lock();
     try {
-      queueLock.lock();
       TableTokenAccount tableInfo = tableSchedulerInfo.get(tableName);
       if (tableInfo == null) {
-        tableInfo = tableSchedulerInfo.put(tableName, new TableTokenAccount(tableName, DEFAULT_TOKENS_PER_INTERVAL));
+        tableInfo = new TableTokenAccount(tableName, DEFAULT_TOKENS_PER_MS, DEFAULT_TOKEN_LIFETIME_MS);
+        tableSchedulerInfo.put(tableName, tableInfo);
       }
       tableInfo.getPendingQueries().add(query);
-      queryReaderConditon.notifyAll();
+      queryReaderCondition.signal();
     } finally {
       queueLock.unlock();
     }
@@ -63,43 +67,68 @@ public class PriorityQueryQueue implements SchedulerPriorityQueue {
    */
 
   @Override
-  public SchedulerQueryContext take() {
+  public @Nonnull SchedulerQueryContext take() {
     queueLock.lock();
-
-    while (true) {
-      SchedulerQueryContext schedulerQueryContext = takeNextQuery();
-      return schedulerQueryContext;
+    try {
+      while (true) {
+        SchedulerQueryContext schedulerQueryContext = null;
+        while ( (schedulerQueryContext = takeNextInternal()) == null) {
+          queryReaderCondition.awaitUninterruptibly();
+        }
+        return schedulerQueryContext;
+      }
+    } finally {
+      queueLock.unlock();
     }
   }
 
-  private SchedulerQueryContext takeNextQuery() {
-    return null;
+  @Override
+  public void markTaskDone(@Nonnull SchedulerQueryContext queryContext) {
+    queueLock.lock();
+    try {
+      TableTokenAccount tableTokenAccount = tableSchedulerInfo.get(queryContext.getQueryRequest().getTableName());
+      if (tableTokenAccount != null) {
+        tableTokenAccount.markQueryEnd(queryContext.getMaxWorkerThreads());
+      }
+      // ignore if null
+    } finally {
+      queueLock.unlock();
+    }
   }
 
   private SchedulerQueryContext takeNextInternal() {
-    String selectedTableName;
-    int selectedTokens = -1;
-    long selectedQueryArrivalTime = Long.MAX_VALUE;
+    int selectedTokens = Integer.MIN_VALUE;
     SchedulerQueryContext selectedQuery = null;
 
     for (Map.Entry<String, TableTokenAccount> tableInfoEntry : tableSchedulerInfo.entrySet()) {
-      String tableName = tableInfoEntry.getKey();
       TableTokenAccount tableInfo = tableInfoEntry.getValue();
-      if (tableInfo.getAvailableTokens() < selectedTokens) {
+      if (tableInfo.getPendingQueries().isEmpty()) {
         continue;
       }
-      SchedulerQueryContext candidateQuery = tableInfo.getPendingQueries().get(0);
-      if (tableInfo.getAvailableTokens() > selectedTokens) {
-        selectedTableName = tableName;
-        selectedTokens = tableInfo.getAvailableTokens();
-        // TODO:
-        //selectedQueryArrivalTime = tableInfo.getPendingQueries().get(0).
-        selectedQuery = candidateQuery;
+      int tableTokens = tableInfo.getAvailableTokens();
+      if (tableTokens < selectedTokens) {
+        continue;
       }
-      // else current table tokens are equal to selected.
-      // select the one with earlier arrival time
-
+      if (tableTokens > selectedTokens || selectedQuery == null) {
+        selectedTokens = tableTokens;
+        selectedQuery = tableInfo.getPendingQueries().get(0);
+      } else {
+        // tokens being equal, use FCFS
+        SchedulerQueryContext candidateQuery = tableInfo.getPendingQueries().get(0);
+        long candidateArrivalTimeMs = candidateQuery.getQueryRequest().getTimerContext().getQueryArrivalTimeMs();
+        long selectedArrivalTimeMs = selectedQuery.getQueryRequest().getTimerContext().getQueryArrivalTimeMs();
+        if (candidateArrivalTimeMs <= selectedArrivalTimeMs) {
+          selectedTokens = tableTokens;
+          selectedQuery = tableInfo.getPendingQueries().get(0);
+        }
+      }
     }
+    if (selectedQuery != null) {
+      String selectedTable = selectedQuery.getQueryRequest().getTableName();
+      TableTokenAccount tableTokenAccount = tableSchedulerInfo.get(selectedTable);
+      tableTokenAccount.getPendingQueries().remove(0);
+    }
+    return selectedQuery;
   }
 }
 

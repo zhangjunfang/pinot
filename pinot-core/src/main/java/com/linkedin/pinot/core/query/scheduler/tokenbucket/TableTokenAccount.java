@@ -17,7 +17,7 @@
 package com.linkedin.pinot.core.query.scheduler.tokenbucket;
 
 import com.linkedin.pinot.core.query.scheduler.SchedulerQueryContext;
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
@@ -29,24 +29,19 @@ public class TableTokenAccount {
 
   private final String tableName;
   private final int tokenLifetimeMs;
+  private final int numTokensPerMs;
+
   private int availableTokens;
   private long lastUpdateTimeMs;
-  private final int numTokensPerInterval;
   private int threadsInUse;
-  private final List<SchedulerQueryContext> pendingQueries = new ArrayList<>();
+  private final List<SchedulerQueryContext> pendingQueries = new LinkedList<>();
 
-
-  // We replenish tokens at regular intervals instead of doing it continuously (say, every ms).
-  // This is to avoid some table to hoard tokens and then block out others for large periods of time
-  //
-  private static final int TOKEN_REPLENISH_INTERVAL_MS = 100;
-
-  TableTokenAccount(String tableName, int numTokensPerInterval, int tokenLifetimeMs) {
+  TableTokenAccount(String tableName, int numTokensPerMs, int tokenLifetimeMs) {
     this.tableName = tableName;
-    this.numTokensPerInterval = numTokensPerInterval;
+    this.numTokensPerMs = numTokensPerMs;
     this.tokenLifetimeMs = tokenLifetimeMs;
     lastUpdateTimeMs = System.currentTimeMillis();
-    availableTokens = numTokensPerInterval;
+    availableTokens = numTokensPerMs * tokenLifetimeMs;
   }
 
   int getAvailableTokens() {
@@ -74,10 +69,9 @@ public class TableTokenAccount {
     // multiple time qantas may have elapsed..hence, the modulo operation
     long diffMs = (currentTimeMs - lastUpdateTimeMs);
     if (diffMs >= tokenLifetimeMs) {
-      availableTokens = tokenLifetimeMs * (numTokensPerInterval - threadsInUse);
+      availableTokens = tokenLifetimeMs * (numTokensPerMs - threadsInUse);
     } else {
       availableTokens -= diffMs * threadsInUse;
     }
   }
-
 }
