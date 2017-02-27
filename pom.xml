@@ -107,6 +107,8 @@
     <SKIP_INTEGRATION_TESTS>true</SKIP_INTEGRATION_TESTS>
     <!-- Configuration for unit/integration tests section 1 of 3 (properties) ENDS HERE.-->
     <avro.version>1.7.6</avro.version>
+    <hadoop.version>2.7.0</hadoop.version>
+    <hadoop.package>org.apache.hadoop</hadoop.package>
     <helix.version>0.6.7</helix.version>
     <!-- jfim: for Kafka 0.9.0.0, use zkclient 0.7 -->
     <kafka.version>0.9.0.1</kafka.version>
@@ -484,9 +486,9 @@
 
       <!-- Hadoop  -->
       <dependency>
-        <groupId>org.apache.hadoop</groupId>
+        <groupId>${hadoop.package}</groupId>
         <artifactId>hadoop-client</artifactId>
-        <version>2.7.0</version>
+        <version>${hadoop.version}</version>
         <exclusions>
           <exclusion>
             <groupId>org.codehaus.jackson</groupId>
