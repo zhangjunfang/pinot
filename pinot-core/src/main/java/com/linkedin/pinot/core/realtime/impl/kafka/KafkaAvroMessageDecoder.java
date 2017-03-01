@@ -46,7 +46,8 @@ public class KafkaAvroMessageDecoder implements KafkaMessageDecoder {
 
   private String schemaRegistryBaseUrl;
   private DecoderFactory decoderFactory;
-  private AvroRecordToPinotRowGenerator avroRecordConvetrer;
+  // private AvroRecordToPinotRowGenerator avroRecordConvetrer;
+  private FlattenAvroRecordIntoPinotRow avroRecordConvetrer;
 
   private static final int MAGIC_BYTE_LENGTH = 1;
   private static final int SCHEMA_HASH_LENGTH = 16;
@@ -71,7 +72,8 @@ public class KafkaAvroMessageDecoder implements KafkaMessageDecoder {
     }
 
     defaultAvroSchema = fetchSchema(new URL(schemaRegistryBaseUrl + "/latest_with_type=" + avroSchemaName));
-    this.avroRecordConvetrer = new AvroRecordToPinotRowGenerator(indexingSchema);
+    // this.avroRecordConvetrer = new AvroRecordToPinotRowGenerator(indexingSchema);
+    avroRecordConvetrer = new FlattenAvroRecordIntoPinotRow();
     this.decoderFactory = new DecoderFactory();
     md5ToAvroSchemaMap = new HashMap<String, org.apache.avro.Schema>();
   }

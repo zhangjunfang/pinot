@@ -532,6 +532,10 @@ public class LLRealtimeSegmentDataManager extends SegmentDataManager {
   }
 
   private boolean buildSegmentInternal(boolean forCommit) {
+  protected boolean buildSegment(boolean buildTgz) {
+    Runtime runtime = Runtime.getRuntime();
+    runtime.gc();
+    LOGGER.info("Used memory before building segment: {}", runtime.totalMemory() - runtime.freeMemory());
     long startTimeMillis = System.currentTimeMillis();
     // Build a segment from in-memory rows.If buildTgz is true, then build the tar.gz file as well
     // TODO Use an auto-closeable object to delete temp resources.
@@ -734,6 +738,11 @@ public class LLRealtimeSegmentDataManager extends SegmentDataManager {
     } catch (InterruptedException e) {
       segmentLogger.error("Could not stop consumer thread");
     }
+
+    if (_rowFilter != null) {
+      _rowFilter.close();
+    }
+
     _realtimeSegment.destroy();
     try {
       _consumerWrapper.close();
@@ -743,6 +752,9 @@ public class LLRealtimeSegmentDataManager extends SegmentDataManager {
   }
 
   protected void start() {
+    Runtime runtime = Runtime.getRuntime();
+    runtime.gc();
+    LOGGER.info("Used memory before starting segment: {}", runtime.totalMemory() - runtime.freeMemory());
     _consumerThread = new Thread(new PartitionConsumer(), _segmentNameStr);
     segmentLogger.info("Created new consumer thread {} for {}", _consumerThread, this.toString());
     _consumerThread.start();
@@ -753,6 +765,11 @@ public class LLRealtimeSegmentDataManager extends SegmentDataManager {
    */
   public void stop() throws InterruptedException {
     _shouldStop = true;
+
+    if (_rowFilter != null) {
+      _rowFilter.close();
+    }
+
     // This method could be called either when we get an ONLINE transition or
     // when we commit a segment and replace the realtime segment with a committed
     // one. In the latter case, we don't want to call join.
@@ -783,7 +800,10 @@ public class LLRealtimeSegmentDataManager extends SegmentDataManager {
     _indexLoadingConfig = indexLoadingConfig;
     _schema = schema;
     _serverMetrics = serverMetrics;
-    _segmentVersion = indexLoadingConfig.getSegmentVersion();
+    // FIXME jfim Not sure why this setting is ignored
+    /*_segmentVersion = SegmentVersion.fromString(tableConfig.getIndexingConfig().getSegmentFormatVersion(),
+        SegmentVersion.DEFAULT_TABLE_VERSION); */
+    _segmentVersion = SegmentVersion.v1;
     _instanceId = _realtimeTableDataManager.getServerInstance();
     _leaseExtender = SegmentBuildTimeLeaseExtender.getLeaseExtender(_instanceId);
     _protocolHandler = new ServerSegmentCompletionProtocolHandler(_instanceId);

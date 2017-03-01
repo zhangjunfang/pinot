@@ -75,7 +75,7 @@ public class AvroUtils {
    * @param avroSchema The input avro schema for which to deduce the dimension/metric/time columns.
    * @return Hash map containing column names as keys and field type (dim/metric/time) as value.
    */
-  private static Map<String, FieldSpec.FieldType> getDefaultFieldTypes(org.apache.avro.Schema avroSchema) {
+  public static Map<String, FieldSpec.FieldType> getDefaultFieldTypes(org.apache.avro.Schema avroSchema) {
     Map<String, FieldSpec.FieldType> fieldTypes = new HashMap<String, FieldSpec.FieldType>();
 
     for (final Field field : avroSchema.getFields()) {
@@ -104,7 +104,7 @@ public class AvroUtils {
    * @param timeUnit Time unit to be used for the time column.
    * @return Return the equivalent pinot schema for the given avro schema.
    */
-  private static Schema getPinotSchemaFromAvroSchema(org.apache.avro.Schema avroSchema,
+  public static Schema getPinotSchemaFromAvroSchema(org.apache.avro.Schema avroSchema,
       Map<String, FieldSpec.FieldType> fieldTypes, TimeUnit timeUnit) {
     Schema pinotSchema = new Schema();
 
@@ -115,6 +115,7 @@ public class AvroUtils {
       try {
         dataType = AvroRecordReader.getColumnType(field);
       } catch (UnsupportedOperationException e) {
+        e.printStackTrace();
         LOGGER.warn("Unsupported field type for field {} schema {}, using String instead.", fieldName, field.schema());
         dataType = FieldSpec.DataType.STRING;
       }

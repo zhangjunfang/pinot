@@ -17,6 +17,7 @@ package com.linkedin.pinot.core.segment.creator.impl;
 
 import com.clearspring.analytics.stream.membership.BloomFilter;
 import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
 import com.linkedin.pinot.common.data.FieldSpec;
 import com.linkedin.pinot.common.data.Schema;
 import com.linkedin.pinot.common.data.StarTreeIndexSpec;
@@ -24,6 +25,7 @@ import com.linkedin.pinot.core.data.GenericRow;
 import com.linkedin.pinot.core.data.partition.PartitionFunction;
 import com.linkedin.pinot.common.config.ColumnPartitionConfig;
 import com.linkedin.pinot.core.indexsegment.generator.SegmentGeneratorConfig;
+import com.linkedin.pinot.core.realtime.impl.kafka.Blah;
 import com.linkedin.pinot.core.segment.creator.ColumnIndexCreationInfo;
 import com.linkedin.pinot.core.segment.creator.ForwardIndexCreator;
 import com.linkedin.pinot.core.segment.creator.InvertedIndexCreator;
@@ -263,6 +265,8 @@ public class SegmentColumnarIndexCreator implements SegmentCreator {
             if (indexCreationInfoMap.get(column).isGenerateBloomFilter()) {
               if (columnValueToIndex instanceof Integer) {
                 bloomFilter.add(Ints.toByteArray((Integer) columnValueToIndex));
+              } else if (columnValueToIndex instanceof Long){
+                bloomFilter.add(Longs.toByteArray((Long) columnValueToIndex));
               } else {
                 // TODO jfim Implement other types
                 throw new RuntimeException("Unimplemented!");
@@ -400,7 +404,7 @@ public class SegmentColumnarIndexCreator implements SegmentCreator {
       addColumnMetadataInfo(properties, column, columnIndexCreationInfo, totalDocs, totalRawDocs, totalAggDocs,
           schema.getFieldSpecFor(column), dictionaryCreatorMap.containsKey(column), dictionaryElementSize,
           hasInvertedIndex, hllOriginColumn,
-          column.equals("key") // TODO jfim: Pass this properly
+          column.equals(Blah.KEY_COLUMN_NAME) // TODO jfim: Pass this properly
       );
     }
 

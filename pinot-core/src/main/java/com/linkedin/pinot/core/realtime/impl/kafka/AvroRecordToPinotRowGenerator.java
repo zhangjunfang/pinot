@@ -15,6 +15,7 @@
  */
 package com.linkedin.pinot.core.realtime.impl.kafka;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 

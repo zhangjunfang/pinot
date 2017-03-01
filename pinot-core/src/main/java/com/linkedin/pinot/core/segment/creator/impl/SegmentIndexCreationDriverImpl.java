@@ -15,6 +15,10 @@
  */
 package com.linkedin.pinot.core.segment.creator.impl;
 
+import com.linkedin.pinot.core.indexsegment.generator.SegmentVersion;
+import com.linkedin.pinot.core.realtime.impl.kafka.Blah;
+import com.linkedin.pinot.core.segment.index.converter.SegmentFormatConverter;
+import com.linkedin.pinot.core.segment.index.converter.SegmentFormatConverterFactory;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -568,7 +572,7 @@ public class SegmentIndexCreationDriverImpl implements SegmentIndexCreationDrive
               segmentStats.getColumnProfileFor(column).getNumPartitions(),
               segmentStats.getColumnProfileFor(column).getPartitionRanges(),
               dataSchema.getFieldSpecFor(column).getDefaultNullValue(),
-              column.equals("key") // TODO jfim: Pass this along correctly
+              column.equals(Blah.KEY_COLUMN_NAME) // TODO jfim: Pass this along correctly
           ));
     }
     segmentIndexCreationInfo.setTotalDocs(totalDocs);

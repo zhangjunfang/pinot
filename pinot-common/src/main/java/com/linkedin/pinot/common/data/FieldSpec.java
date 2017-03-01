@@ -350,6 +350,7 @@ public abstract class FieldSpec {
         case INT:
           return INT;
         case LONG:
+        case FIXED: // HACK jfim
           return LONG;
         case FLOAT:
           return FLOAT;

@@ -243,6 +243,8 @@ public class RealtimeSegmentImpl implements RealtimeSegment {
       Object keyValue = row.getValue(keyColumn);
       if (keyValue instanceof Integer) {
         bloomFilter.add(Ints.toByteArray((Integer) keyValue));
+      } else if (keyValue instanceof Long) {
+        bloomFilter.add(Longs.toByteArray((Long) keyValue));
       } else {
         // TODO jfim: Add other types
         throw new RuntimeException("Unimplemented!");
