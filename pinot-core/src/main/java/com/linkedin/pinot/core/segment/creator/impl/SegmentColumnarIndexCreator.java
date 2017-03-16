@@ -232,6 +232,13 @@ public class SegmentColumnarIndexCreator implements SegmentCreator {
       FieldSpec spec) {
     String column = spec.getName();
 
+    int uniqueValueCount = info.getDistinctValueCount();
+    if (50000 < uniqueValueCount && !column.equals(Blah.KEY_COLUMN_NAME) && !column.equals(config.getTimeColumnName())) {
+      LOGGER.info("Building raw index for column {} due to cardinality of {} exceeding 50000", column,
+          uniqueValueCount);
+      config.getRawIndexCreationColumns().add(column);
+    }
+
     if (config.getRawIndexCreationColumns().contains(column)) {
       if (!spec.isSingleValueField()) {
         throw new RuntimeException(
@@ -239,6 +246,7 @@ public class SegmentColumnarIndexCreator implements SegmentCreator {
       }
       return false;
     }
+
     return info.isCreateDictionary();
   }
 
@@ -252,32 +260,34 @@ public class SegmentColumnarIndexCreator implements SegmentCreator {
         }
 
         SegmentDictionaryCreator dictionaryCreator = dictionaryCreatorMap.get(column);
+        ForwardIndexCreator forwardIndexCreator = forwardIndexCreatorMap.get(column);
         if (schema.getFieldSpecFor(column).isSingleValueField()) {
-          if (dictionaryCreator != null) {
+          // TODO jfim Refactor this? Probably also rename "isGenerateBloomFilter"
+          if (indexCreationInfoMap.get(column).isGenerateBloomFilter()) {
+            if (columnValueToIndex instanceof Integer) {
+              bloomFilter.add(Ints.toByteArray((Integer) columnValueToIndex));
+            } else if (columnValueToIndex instanceof Long){
+              bloomFilter.add(Longs.toByteArray((Long) columnValueToIndex));
+            } else {
+              // TODO jfim Implement other types
+              throw new RuntimeException("Unimplemented!");
+            }
+          }
+
+          if (dictionaryCreator != null && forwardIndexCreator instanceof SingleValueForwardIndexCreator) {
             int dictionaryIndex = dictionaryCreator.indexOfSV(columnValueToIndex);
-            ((SingleValueForwardIndexCreator) forwardIndexCreatorMap.get(column)).index(docIdCounter, dictionaryIndex);
+            // HACK jfim This is broken (forwardIndexCreator is not always a single value)
+            ((SingleValueForwardIndexCreator) forwardIndexCreator).index(docIdCounter, dictionaryIndex);
             // TODO : {refactor inverted index addition}
             if (invertedIndexCreatorMap.containsKey(column)) {
               invertedIndexCreatorMap.get(column).add(docIdCounter, dictionaryIndex);
             }
-
-            // TODO jfim Refactor this? Probably also rename "isGenerateBloomFilter"
-            if (indexCreationInfoMap.get(column).isGenerateBloomFilter()) {
-              if (columnValueToIndex instanceof Integer) {
-                bloomFilter.add(Ints.toByteArray((Integer) columnValueToIndex));
-              } else if (columnValueToIndex instanceof Long){
-                bloomFilter.add(Longs.toByteArray((Long) columnValueToIndex));
-              } else {
-                // TODO jfim Implement other types
-                throw new RuntimeException("Unimplemented!");
-              }
-            }
           } else {
-            ((SingleValueRawIndexCreator) forwardIndexCreatorMap.get(column)).index(docIdCounter, columnValueToIndex);
+            ((SingleValueRawIndexCreator) forwardIndexCreator).index(docIdCounter, columnValueToIndex);
           }
         } else {
           int[] dictionaryIndex = dictionaryCreator.indexOfMV(columnValueToIndex);
-          ((MultiValueForwardIndexCreator) forwardIndexCreatorMap.get(column)).index(docIdCounter, dictionaryIndex);
+          ((MultiValueForwardIndexCreator) forwardIndexCreator).index(docIdCounter, dictionaryIndex);
 
           // TODO : {refactor inverted index addition}
           if (invertedIndexCreatorMap.containsKey(column)) {

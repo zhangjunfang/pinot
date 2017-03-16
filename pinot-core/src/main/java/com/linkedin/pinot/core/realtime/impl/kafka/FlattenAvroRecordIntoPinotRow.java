@@ -126,7 +126,9 @@ public class FlattenAvroRecordIntoPinotRow {
 
   public static void main(String[] args) throws Exception {
     DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
-    DataFileReader<GenericRecord> dataFileReader = new DataFileReader<GenericRecord>(new File("/Users/jfim/work/PageViewEvent-part-r-5359753.1486116408692.544450217.avro"), datumReader);
+    File file = new File("/Users/jfim/work/PageViewEvent-part-r-5359753.1486116408692.544450217.avro");
+    DataFileReader<GenericRecord> dataFileReader = new DataFileReader<GenericRecord>(
+        file, datumReader);
     FlattenAvroRecordIntoPinotRow flattener = new FlattenAvroRecordIntoPinotRow();
 
     AvroFlattener avroSchemaFlattener = new AvroFlattener();
@@ -135,10 +137,14 @@ public class FlattenAvroRecordIntoPinotRow {
     com.linkedin.pinot.common.data.Schema pinotSchema = AvroUtils.getPinotSchemaFromAvroSchema(flatAvroSchema, AvroUtils.getDefaultFieldTypes(flatAvroSchema), TimeUnit.MILLISECONDS);
     System.out.println("pinotSchema = " + pinotSchema);
 
+    int rowCount = 0;
     while(dataFileReader.hasNext()) {
       GenericRecord record = dataFileReader.next();
-      GenericRow genericRow = flattener.transform((GenericData.Record) record, dataFileReader.getSchema(), new GenericRow());
+      //GenericRow genericRow = flattener.transform((GenericData.Record) record, dataFileReader.getSchema(), new GenericRow());
       // System.out.println("genericRow = " + genericRow);
+      rowCount++;
     }
+    System.out.println("rowCount = " + rowCount);
+    System.out.println("file.length() = " + file.length());
   }
 }

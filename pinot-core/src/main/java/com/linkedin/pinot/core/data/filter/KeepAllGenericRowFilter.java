@@ -14,13 +14,22 @@
  * limitations under the License.
  */
 
-package com.linkedin.pinot.core.realtime.impl.kafka;
+package com.linkedin.pinot.core.data.filter;
+
+import com.linkedin.pinot.core.data.GenericRow;
+
 
 /**
- * A place for hacks
+ * Generic row filter that does not reject any rows.
  */
-public class Blah {
-  public static final String KEY_COLUMN_NAME = "header__guid";
-  public static final boolean ENABLE_TIME_RANGE_FILTERING = false;
-  public static final boolean ENABLE_ROW_DEDUPE = true;
+public class KeepAllGenericRowFilter implements GenericRowFilter {
+  @Override
+  public GenericRow filter(GenericRow genericRow) {
+    return genericRow;
+  }
+
+  @Override
+  public void close() {
+    // Do nothing
+  }
 }

@@ -23,14 +23,20 @@ import com.linkedin.pinot.common.utils.LLCSegmentName;
 import com.linkedin.pinot.common.utils.SegmentName;
 import com.linkedin.pinot.core.common.DataSource;
 import com.linkedin.pinot.core.data.GenericRow;
+import com.linkedin.pinot.core.data.manager.offline.OfflineSegmentDataManager;
 import com.linkedin.pinot.core.data.manager.offline.SegmentDataManager;
 import com.linkedin.pinot.core.data.manager.realtime.RealtimeTableDataManager;
+import com.linkedin.pinot.core.realtime.RealtimeSegment;
+import com.linkedin.pinot.core.realtime.impl.kafka.Blah;
+import com.linkedin.pinot.core.segment.index.IndexSegmentImpl;
 import com.linkedin.pinot.core.segment.index.readers.Dictionary;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,27 +45,61 @@ import org.slf4j.LoggerFactory;
  * Dictionary based duplicate key row filter.
  */
 public class DictionaryGenericRowFilter implements GenericRowFilter {
+  private static class TimeRange {
+    long start;
+    long end;
+
+    public TimeRange(long start, long end) {
+      this.start = start;
+      this.end = end;
+    }
+
+    public boolean isTimestampWithinRange(long timestamp) {
+      return start <= timestamp && timestamp <= end;
+    }
+  }
+
   private static final Logger LOGGER = LoggerFactory.getLogger(DictionaryGenericRowFilter.class);
 
   private final String _keyColumn;
+  private final String _timeColumnName;
   private final RealtimeTableDataManager _realtimeTableDataManager;
-  private final List<Pair<Dictionary, BloomFilter>> _dictionariesAndBloomFilters;
+  private final List<Triple<Dictionary, BloomFilter, TimeRange>> _dictionariesAndBloomFilters;
+  private final List<Triple<Dictionary, BloomFilter, TimeRange>> _acrossDictionariesAndBloomFilters;
   private final List<SegmentDataManager> _acquiredSegments;
+
+  private final Dictionary _currentSegmentDictionary;
+  private long currentDictionaryNanos = 0;
+  private long currentDictionaryTests = 0;
+  private long currentDictionaryHits = 0;
+
+  private long timeRangeTests = 0;
+  private long timeRangeHits = 0;
+  private long acrossTimeRangeTests = 0;
+  private long acrossTimeRangeHits = 0;
   private long bloomFilterTests = 0;
   private long bloomFilterHits = 0;
   private long dictionaryTests = 0;
   private long dictionaryHits = 0;
   private long bloomFilterNanos = 0;
   private long dictionaryNanos = 0;
+  private long acrossBloomFilterTests = 0;
+  private long acrossBloomFilterHits = 0;
+  private long acrossDictionaryTests = 0;
+  private long acrossDictionaryHits = 0;
+  private long acrossBloomFilterNanos = 0;
+  private long acrossDictionaryNanos = 0;
 
-  public DictionaryGenericRowFilter(String keyColumn, Dictionary currentSegmentDictionary, LLCSegmentName currentSegmentName, RealtimeTableDataManager realtimeTableDataManager) {
+  public DictionaryGenericRowFilter(String keyColumn, Dictionary currentSegmentDictionary, LLCSegmentName currentSegmentName, RealtimeTableDataManager realtimeTableDataManager, String timeColumnName) {
     _keyColumn = keyColumn;
     _realtimeTableDataManager = realtimeTableDataManager;
     _dictionariesAndBloomFilters = new ArrayList<>();
+    _acrossDictionariesAndBloomFilters = new ArrayList<>();
     _acquiredSegments = new ArrayList<>();
+    _timeColumnName = timeColumnName;
 
     // Keep the dictionary for this segment
-    _dictionariesAndBloomFilters.add(new ImmutablePair<Dictionary, BloomFilter>(currentSegmentDictionary, null));
+    _currentSegmentDictionary = currentSegmentDictionary;
 
     // Get dictionaries for other segments
     // TODO jfim: There is no guarantee at this point that this covers all segments, since a consuming segment might process its state transition before an already stored segment (eg. when if a server restarts)
@@ -67,6 +107,12 @@ public class DictionaryGenericRowFilter implements GenericRowFilter {
 
     for (SegmentDataManager segment : allSegments) {
       String segmentNameStr = segment.getSegmentName();
+
+      // Ignore current realtime segments
+      if (segment.getSegment() instanceof RealtimeSegment) {
+        realtimeTableDataManager.releaseSegment(segment);
+        continue;
+      }
 
       // Ignore non LLC segments
       if (!SegmentName.isLowLevelConsumerSegmentName(segmentNameStr)) {
@@ -77,12 +123,23 @@ public class DictionaryGenericRowFilter implements GenericRowFilter {
       LLCSegmentName segmentName = new LLCSegmentName(segmentNameStr);
 
       // Keep segments for this table and partition
-      if (segmentName.getTableName().equals(currentSegmentName.getTableName()) && segmentName.getPartitionId() == currentSegmentName.getPartitionId()) {
+      if (segmentName.getTableName().equals(currentSegmentName.getTableName())) {
         _acquiredSegments.add(segment);
+        boolean isSamePartition = segmentName.getPartitionId() == currentSegmentName.getPartitionId();
         DataSource dataSource = segment.getSegment().getDataSource(keyColumn);
-        Dictionary dictionary = dataSource.getDictionary();
-        BloomFilter bloomFilter = dataSource.getBloomFilter();
-        _dictionariesAndBloomFilters.add(new ImmutablePair<Dictionary, BloomFilter>(dictionary, bloomFilter));
+        Dictionary keyColumnDictionary = dataSource.getDictionary();
+        BloomFilter keyColumnBloomFilter = dataSource.getBloomFilter();
+
+        Dictionary timeColumnDictionary = segment.getSegment().getDataSource(timeColumnName).getDictionary();
+        long startTime = timeColumnDictionary.getLongValue(0);
+        long endTime = timeColumnDictionary.getLongValue(timeColumnDictionary.length() - 1);
+        TimeRange timeRange = new TimeRange(startTime, endTime);
+
+        if (isSamePartition) {
+          _dictionariesAndBloomFilters.add(new ImmutableTriple<>(keyColumnDictionary, keyColumnBloomFilter, timeRange));
+        } else {
+          _acrossDictionariesAndBloomFilters.add(new ImmutableTriple<>(keyColumnDictionary, keyColumnBloomFilter, timeRange));
+        }
       } else {
         realtimeTableDataManager.releaseSegment(segment);
       }
@@ -101,22 +158,46 @@ public class DictionaryGenericRowFilter implements GenericRowFilter {
       return genericRow;
     }
 
+    byte[] value;
+    if (keyValue instanceof Integer) {
+      value = Ints.toByteArray((Integer) keyValue);
+    } else if (keyValue instanceof Long){
+      value = Longs.toByteArray((Long) keyValue);
+    } else {
+      // TODO jfim Implement other types
+      throw new RuntimeException("Unimplemented!");
+    }
+
+    long currentDictionaryNanoStart = System.nanoTime();
+    boolean isInCurrentDictionary = 0 <= _currentSegmentDictionary.indexOf(keyValue);
+    long currentDictionaryNanoEnd = System.nanoTime();
+    currentDictionaryNanos += (currentDictionaryNanoEnd - currentDictionaryNanoStart);
+
+    currentDictionaryTests++;
+    if (isInCurrentDictionary) {
+      currentDictionaryHits++;
+      LOGGER.info("Discarding current keyValue = " + keyValue);
+      return null;
+    }
+
     // Does this key already exist in any of the dictionaries/bloom filters?
-    for (Pair<Dictionary, BloomFilter> dictionaryAndBloomFilter : _dictionariesAndBloomFilters) {
+    for (Triple<Dictionary, BloomFilter, TimeRange> dictionaryAndBloomFilter : _dictionariesAndBloomFilters) {
       Dictionary dictionary = dictionaryAndBloomFilter.getLeft();
-      BloomFilter bloomFilter = dictionaryAndBloomFilter.getRight();
+      BloomFilter bloomFilter = dictionaryAndBloomFilter.getMiddle();
+      TimeRange timeRange = dictionaryAndBloomFilter.getRight();
+
+      if (Blah.ENABLE_TIME_RANGE_FILTERING) {
+        boolean inTimeRange = timeRange.isTimestampWithinRange(((Number) genericRow.getValue(_timeColumnName)).longValue());
+        timeRangeTests++;
+        if (!inTimeRange) {
+          continue;
+        } else {
+          timeRangeHits++;
+        }
+      }
 
       if (bloomFilter != null) {
         long bloomStartNanos = System.nanoTime();
-        byte[] value;
-        if (keyValue instanceof Integer) {
-          value = Ints.toByteArray((Integer) keyValue);
-        } else if (keyValue instanceof Long){
-          value = Longs.toByteArray((Long) keyValue);
-        } else {
-          // TODO jfim Implement other types
-          throw new RuntimeException("Unimplemented!");
-        }
 
         // Skip the dictionary lookup if this value cannot be present
         bloomFilterTests++;
@@ -137,12 +218,53 @@ public class DictionaryGenericRowFilter implements GenericRowFilter {
       dictionaryNanos += (dictionaryEnd - dictionaryStart);
       if (0 <= indexOf) {
         dictionaryHits++;
-        System.out.println("Discarding keyValue = " + keyValue);
+        LOGGER.info("Discarding keyValue = " + keyValue);
         // Yes, discard row
         return null;
       }
     }
-    
+
+    for (Triple<Dictionary, BloomFilter, TimeRange> dictionaryAndBloomFilter : _acrossDictionariesAndBloomFilters) {
+      Dictionary dictionary = dictionaryAndBloomFilter.getLeft();
+      BloomFilter bloomFilter = dictionaryAndBloomFilter.getMiddle();
+      TimeRange timeRange = dictionaryAndBloomFilter.getRight();
+
+      boolean inTimeRange = timeRange.isTimestampWithinRange(((Number) genericRow.getValue(_timeColumnName)).longValue());
+      acrossTimeRangeTests++;
+      if (!inTimeRange) {
+        continue;
+      } else {
+        acrossTimeRangeHits++;
+      }
+
+      if (bloomFilter != null) {
+        long bloomStartNanos = System.nanoTime();
+
+        // Skip the dictionary lookup if this value cannot be present
+        acrossBloomFilterTests++;
+        boolean isPresentInBloomFilter = bloomFilter.isPresent(value);
+        long bloomEndNanos = System.nanoTime();
+        acrossBloomFilterNanos += (bloomEndNanos - bloomStartNanos);
+        if (!isPresentInBloomFilter) {
+          continue;
+        } else {
+          acrossBloomFilterHits++;
+        }
+      }
+
+      acrossDictionaryTests++;
+      long dictionaryStart = System.nanoTime();
+      int indexOf = dictionary.indexOf(keyValue);
+      long dictionaryEnd = System.nanoTime();
+      acrossDictionaryNanos += (dictionaryEnd - dictionaryStart);
+      if (0 <= indexOf) {
+        acrossDictionaryHits++;
+        LOGGER.info("Discarding across keyValue = " + keyValue);
+        // Yes, discard row
+        return null;
+      }
+    }
+
     return genericRow;
   }
 
@@ -155,13 +277,20 @@ public class DictionaryGenericRowFilter implements GenericRowFilter {
 
       _acquiredSegments.clear();
 
+      LOGGER.info("Closing filter, same segment stats: {} / {} ({} ms total)", currentDictionaryHits, currentDictionaryTests, currentDictionaryNanos / 1000000.0);
       LOGGER.info(
-          "Closing filter, bloom tests {} / {} ({} ms total) dictionary {} / {} ({} ms total), lookback of {} segments",
+          "Same partition: time tests {} / {}, bloom tests {} / {} ({} ms total) dictionary {} / {} ({} ms total), lookback of {} segments",
+          timeRangeHits, timeRangeTests,
           bloomFilterHits, bloomFilterTests, bloomFilterNanos / 1000000.0, dictionaryHits, dictionaryTests,
           dictionaryNanos / 1000000.0, _dictionariesAndBloomFilters.size());
+      LOGGER.info(
+          "Across partitions: time tests {} / {}, bloom tests {} / {} ({} ms total) dictionary {} / {} ({} ms total), lookback of {} segments",
+          acrossTimeRangeHits, acrossTimeRangeTests,
+          acrossBloomFilterHits, acrossBloomFilterTests, acrossBloomFilterNanos / 1000000.0, acrossDictionaryHits, acrossDictionaryTests,
+          acrossDictionaryNanos / 1000000.0, _acrossDictionariesAndBloomFilters.size());
     }
 
-/*    System.out.println("Bloom filter hits/tests: " + bloomFilterHits + "/" + bloomFilterTests);
-    System.out.println("Dictionary hits/tests  : " + dictionaryHits + "/" + dictionaryTests); */
+/*    LOGGER.info("Bloom filter hits/tests: " + bloomFilterHits + "/" + bloomFilterTests);
+    LOGGER.info("Dictionary hits/tests  : " + dictionaryHits + "/" + dictionaryTests); */
   }
 }
