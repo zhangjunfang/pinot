@@ -54,6 +54,7 @@ public class PriorityQueryQueue implements SchedulerPriorityQueue {
         tableInfo = new TableTokenAccount(tableName, DEFAULT_TOKENS_PER_MS, DEFAULT_TOKEN_LIFETIME_MS);
         tableSchedulerInfo.put(tableName, tableInfo);
       }
+      query.setTableAccountant(tableInfo);
       tableInfo.getPendingQueries().add(query);
       queryReaderCondition.signal();
     } finally {
@@ -65,7 +66,6 @@ public class PriorityQueryQueue implements SchedulerPriorityQueue {
    * Blocking call to read the next query in order of priority
    * @return
    */
-
   @Override
   public @Nonnull SchedulerQueryContext take() {
     queueLock.lock();
@@ -88,7 +88,7 @@ public class PriorityQueryQueue implements SchedulerPriorityQueue {
     try {
       TableTokenAccount tableTokenAccount = tableSchedulerInfo.get(queryContext.getQueryRequest().getTableName());
       if (tableTokenAccount != null) {
-        tableTokenAccount.markQueryEnd(queryContext.getMaxWorkerThreads());
+        tableTokenAccount.decrementThreads();
       }
       // ignore if null
     } finally {

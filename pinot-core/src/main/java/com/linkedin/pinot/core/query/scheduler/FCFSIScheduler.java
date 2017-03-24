@@ -24,37 +24,48 @@ import com.linkedin.pinot.common.metrics.ServerQueryPhase;
 import com.linkedin.pinot.common.query.QueryExecutor;
 import com.linkedin.pinot.common.query.QueryRequest;
 import com.linkedin.pinot.common.utils.DataTable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.commons.configuration.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
 /**
- * First Come First Served(FCFS) query scheduler.
- * The FCFS policy applies across all tables.
- * This is similar to the existing query scheduling logic.
+ * FCFS but with table specific query runner queues. They still use the same underlying query worker pool.
  */
-public class FCFSQueryScheduler extends QueryScheduler {
+public class FCFSIScheduler extends QueryScheduler {
+  private static final Logger LOGGER = LoggerFactory.getLogger(FCFSIScheduler.class);
+  private final ConcurrentMap<String, ExecutorService> tableQueryRunnerMap = new ConcurrentHashMap<>();
 
-  private static Logger LOGGER = LoggerFactory.getLogger(FCFSQueryScheduler.class);
-
-  public FCFSQueryScheduler(@Nonnull Configuration schedulerConfig, @Nonnull QueryExecutor queryExecutor, @Nonnull
-      ServerMetrics serverMetrics) {
+  public FCFSIScheduler(@Nonnull Configuration schedulerConfig, QueryExecutor queryExecutor,
+      @Nonnull ServerMetrics serverMetrics) {
     super(schedulerConfig, queryExecutor, serverMetrics);
   }
 
+  @Nonnull
   @Override
-  public ListenableFuture<byte[]> submit(final QueryRequest queryRequest) {
+  public ListenableFuture<byte[]> submit(@Nullable QueryRequest queryRequest) {
     Preconditions.checkNotNull(queryRequest);
     queryRequest.getTimerContext().startNewPhaseTimer(ServerQueryPhase.SCHEDULER_WAIT);
+    String tableName = queryRequest.getTableName();
+    ExecutorService tableExecutor = tableQueryRunnerMap.get(tableName);
+    if (tableExecutor == null) {
+      tableExecutor = Executors.newFixedThreadPool(numQueryRunnerThreads);
+      tableQueryRunnerMap.put(tableName, tableExecutor);
+    }
     ListenableFutureTask<DataTable> queryTask = getQueryFutureTask(queryRequest);
     ListenableFuture<byte[]> queryResultFuture = getQueryResultFuture(queryRequest, queryTask);
-    queryRunners.submit(queryTask);
+    tableExecutor.submit(queryTask);
     return queryResultFuture;
   }
 
   @Override
   public void start() {
-    // no-op
+
   }
 }

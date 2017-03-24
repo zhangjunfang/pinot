@@ -142,19 +142,22 @@ public abstract class QueryScheduler {
 
   public ExecutorService getWorkerExecutorService() { return queryWorkers; }
 
-
-  protected Callable<DataTable> getQueryCallable(final QueryRequest request) {
+  protected Callable<DataTable> getQueryCallable(final QueryRequest request, final ExecutorService e) {
     return new Callable<DataTable>() {
       @Override
       public DataTable call()
           throws Exception {
-        return queryExecutor.processQuery(request, getWorkerExecutorService());
+        return queryExecutor.processQuery(request, e);
       }
     };
   }
 
   protected ListenableFutureTask<DataTable> getQueryFutureTask(final QueryRequest request) {
-    return ListenableFutureTask.create(getQueryCallable(request));
+    return ListenableFutureTask.create(getQueryCallable(request, getWorkerExecutorService()));
+  }
+
+  protected ListenableFutureTask<DataTable> getQueryFutureTask(final QueryRequest request, ExecutorService e) {
+    return ListenableFutureTask.create(getQueryCallable(request, e));
   }
 
   protected ListenableFuture<byte[]> getQueryResultFuture(final QueryRequest queryRequest,

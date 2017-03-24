@@ -19,6 +19,8 @@ package com.linkedin.pinot.core.query.scheduler.tokenbucket;
 import com.linkedin.pinot.core.query.scheduler.SchedulerQueryContext;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +38,8 @@ public class TableTokenAccount {
   private int threadsInUse;
   private final List<SchedulerQueryContext> pendingQueries = new LinkedList<>();
 
+  private final Lock tokenLock = new ReentrantLock();
+
   TableTokenAccount(String tableName, int numTokensPerMs, int tokenLifetimeMs) {
     this.tableName = tableName;
     this.numTokensPerMs = numTokensPerMs;
@@ -45,18 +49,33 @@ public class TableTokenAccount {
   }
 
   int getAvailableTokens() {
-    consumeTokens();
-    return availableTokens;
+    tokenLock.lock();
+    try {
+      consumeTokens();
+      return availableTokens;
+    } finally {
+      tokenLock.unlock();
+    }
   }
 
-  void markQueryStart(int numThreads) {
-    consumeTokens();
-    threadsInUse += numThreads;
+  public void incrementThreads() {
+    tokenLock.lock();
+    try {
+      consumeTokens();
+      ++threadsInUse;
+    } finally {
+      tokenLock.unlock();
+    }
   }
 
-  void markQueryEnd(int numThreads) {
-    consumeTokens();
-    threadsInUse -= numThreads;
+  public void decrementThreads() {
+    tokenLock.lock();
+    try {
+      consumeTokens();
+      --threadsInUse;
+    } finally {
+      tokenLock.unlock();
+    }
   }
 
   public List<SchedulerQueryContext> getPendingQueries() {
