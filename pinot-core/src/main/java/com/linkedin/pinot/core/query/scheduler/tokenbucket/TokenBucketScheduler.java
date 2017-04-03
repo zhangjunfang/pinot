@@ -42,7 +42,10 @@ public class TokenBucketScheduler extends QueryScheduler {
   private static Logger LOGGER = LoggerFactory.getLogger(TokenBucketScheduler.class);
 
   public static final int MAX_THREAD_LIMIT = Math.max(1, Runtime.getRuntime().availableProcessors() / 3);
+  // The values for max threads count and pct below are educated guesses
   public static final String THREADS_PER_QUERY_PCT = "threads_per_query_pct";
+  public static final int DEFAULT_THREADS_PER_QUERY_PCT = 30;
+  public static final String MAX_THREADS_PER_QUERY = "max_threads_per_query";
   private final SchedulerPriorityQueue queryQueue;
   private final AtomicInteger pendingQuries = new AtomicInteger(0);
   private final Semaphore runningQueriesSemaphore = new Semaphore(numQueryRunnerThreads);
@@ -52,12 +55,14 @@ public class TokenBucketScheduler extends QueryScheduler {
       ServerMetrics serverMetrics) {
     super(schedulerConfig, queryExecutor, serverMetrics);
     queryQueue = new PriorityQueryQueue();
-    int tpqPct = schedulerConfig.getInt(THREADS_PER_QUERY_PCT, 30);
+    int tpqPct = schedulerConfig.getInt(THREADS_PER_QUERY_PCT, DEFAULT_THREADS_PER_QUERY_PCT);
+    // protect from bad config values of <1. Ensure at least 1 thread per query
+    int mtq = Math.max(1, schedulerConfig.getInt(MAX_THREADS_PER_QUERY, MAX_THREAD_LIMIT));
     if (tpqPct > 1 &&  tpqPct <= 100) {
-      maxThreadsPerQuery = Math.max(1, numQueryWorkerThreads * tpqPct / 100);
+      maxThreadsPerQuery = Math.max(1, Math.min(mtq, numQueryWorkerThreads * tpqPct / 100));
     } else {
-      LOGGER.error("Invalid value for {}, using default: {}", THREADS_PER_QUERY_PCT, MAX_THREAD_LIMIT);
-      maxThreadsPerQuery = MAX_THREAD_LIMIT;
+      LOGGER.error("Invalid value for {}, using default: {}", THREADS_PER_QUERY_PCT, mtq);
+      maxThreadsPerQuery = mtq;
     }
   }
 
