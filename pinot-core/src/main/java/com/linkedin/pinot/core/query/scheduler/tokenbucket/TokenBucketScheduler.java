@@ -51,10 +51,19 @@ public class TokenBucketScheduler extends QueryScheduler {
   private final Semaphore runningQueriesSemaphore = new Semaphore(numQueryRunnerThreads);
   private final int maxThreadsPerQuery;
 
+  public static final String TOKENS_PER_MS_KEY = "tokens_per_ms";
+  public static final String TOKEN_LIFETIME_MS_KEY = "token_lifetime_ms";
+  private static final int DEFAULT_TOKEN_LIFETIME_MS = 100;
+
   public TokenBucketScheduler(@Nonnull Configuration schedulerConfig, QueryExecutor queryExecutor,
       ServerMetrics serverMetrics) {
+
     super(schedulerConfig, queryExecutor, serverMetrics);
-    queryQueue = new PriorityQueryQueue();
+
+    int tokensPerMs = schedulerConfig.getInt(TOKENS_PER_MS_KEY, numQueryWorkerThreads + numQueryRunnerThreads);
+    int tokenLifetimeMs = schedulerConfig.getInt(TOKEN_LIFETIME_MS_KEY, DEFAULT_TOKEN_LIFETIME_MS);
+    queryQueue = new PriorityQueryQueue(tokensPerMs, tokenLifetimeMs);
+
     int tpqPct = schedulerConfig.getInt(THREADS_PER_QUERY_PCT, DEFAULT_THREADS_PER_QUERY_PCT);
     // protect from bad config values of <1. Ensure at least 1 thread per query
     int mtq = Math.max(1, schedulerConfig.getInt(MAX_THREADS_PER_QUERY, MAX_THREAD_LIMIT));

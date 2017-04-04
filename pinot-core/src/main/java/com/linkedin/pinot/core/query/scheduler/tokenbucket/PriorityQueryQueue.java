@@ -31,16 +31,17 @@ import org.slf4j.LoggerFactory;
 public class PriorityQueryQueue implements SchedulerPriorityQueue {
 
   private static Logger LOGGER = LoggerFactory.getLogger(PriorityQueryQueue.class);
-  private static final int DEFAULT_TOKEN_LIFETIME_MS = 1000;
-  private static final int DEFAULT_TOKENS_PER_MS;
 
   private final Map<String, TableTokenAccount> tableSchedulerInfo = new HashMap<>();
 
   private final Lock queueLock = new ReentrantLock();
   private final Condition queryReaderCondition = queueLock.newCondition();
+  private final int tokenLifetimeMs;
+  private final int tokensPerMs;
 
-  static {
-    DEFAULT_TOKENS_PER_MS = Runtime.getRuntime().availableProcessors() ;
+  public PriorityQueryQueue(int tokensPerMs, int tokenLifetimeMs) {
+    this.tokensPerMs = tokensPerMs;
+    this.tokenLifetimeMs = tokenLifetimeMs;
   }
 
   @Override
@@ -51,7 +52,7 @@ public class PriorityQueryQueue implements SchedulerPriorityQueue {
     try {
       TableTokenAccount tableInfo = tableSchedulerInfo.get(tableName);
       if (tableInfo == null) {
-        tableInfo = new TableTokenAccount(tableName, DEFAULT_TOKENS_PER_MS, DEFAULT_TOKEN_LIFETIME_MS);
+        tableInfo = new TableTokenAccount(tableName, tokensPerMs, tokenLifetimeMs);
         tableSchedulerInfo.put(tableName, tableInfo);
       }
       query.setTableAccountant(tableInfo);
