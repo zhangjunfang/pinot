@@ -33,10 +33,4 @@ public interface SchedulerPriorityQueue {
    */
   @Nonnull SchedulerQueryContext take();
 
-  /**
-   * Should be called after completion of the scheduled query to update
-   * any accounting information
-   * @param queryContext
-   */
-  void markTaskDone(@Nonnull SchedulerQueryContext queryContext);
 }

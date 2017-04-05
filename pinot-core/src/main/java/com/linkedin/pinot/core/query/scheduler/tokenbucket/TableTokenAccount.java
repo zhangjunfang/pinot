@@ -39,6 +39,7 @@ public class TableTokenAccount {
   private final List<SchedulerQueryContext> pendingQueries = new LinkedList<>();
 
   private final Lock tokenLock = new ReentrantLock();
+  private int runningQueries = 0;
 
   TableTokenAccount(String tableName, int numTokensPerMs, int tokenLifetimeMs) {
     this.tableName = tableName;
@@ -46,6 +47,7 @@ public class TableTokenAccount {
     this.tokenLifetimeMs = tokenLifetimeMs;
     lastUpdateTimeMs = System.currentTimeMillis();
     availableTokens = numTokensPerMs * tokenLifetimeMs;
+    // LOGGER.info(">>>>>>>>>>>>>>>>>> Assigning initial tokens: {}", availableTokens);
   }
 
   int getAvailableTokens() {
@@ -61,8 +63,7 @@ public class TableTokenAccount {
   public void incrementThreads() {
     tokenLock.lock();
     try {
-      consumeTokens();
-      ++threadsInUse;
+      incrementThreadsInternal();
     } finally {
       tokenLock.unlock();
     }
@@ -73,6 +74,26 @@ public class TableTokenAccount {
     try {
       consumeTokens();
       --threadsInUse;
+    } finally {
+      tokenLock.unlock();
+    }
+  }
+
+  public void startQuery() {
+    tokenLock.lock();
+    try {
+      incrementThreadsInternal();
+      ++runningQueries;
+    } finally {
+      tokenLock.unlock();
+    }
+  }
+
+  public void endQuery() {
+    tokenLock.lock();
+    try {
+      decrementThreadsInternal();
+      --runningQueries;
     } finally {
       tokenLock.unlock();
     }
@@ -92,5 +113,18 @@ public class TableTokenAccount {
     } else {
       availableTokens -= diffMs * threadsInUse;
     }
+    // LOGGER.info("currentTime:{}, tokens: {}, threads: {}, lastTime: {}, diffTime: {}, numTokens: {}", currentTimeMs,
+    // availableTokens, threadsInUse, diffMs, numTokensPerMs);
+    lastUpdateTimeMs = currentTimeMs;
+  }
+
+  private void incrementThreadsInternal() {
+    consumeTokens();
+    ++threadsInUse;
+  }
+
+  private void decrementThreadsInternal() {
+    consumeTokens();
+    --threadsInUse;
   }
 }

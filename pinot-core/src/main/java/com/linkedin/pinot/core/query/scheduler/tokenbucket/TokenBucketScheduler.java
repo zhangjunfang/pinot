@@ -87,9 +87,8 @@ public class TokenBucketScheduler extends QueryScheduler {
     queryResultFuture.addListener(new Runnable() {
       @Override
       public void run() {
-        queryQueue.markTaskDone(schedQueryContext);
         runningQueriesSemaphore.release();
-        schedQueryContext.getTableAccountant().decrementThreads();
+        schedQueryContext.getTableAccountant().endQuery();
       }
     }, MoreExecutors.directExecutor());
     pendingQuries.incrementAndGet();
@@ -113,7 +112,7 @@ public class TokenBucketScheduler extends QueryScheduler {
           SchedulerQueryContext request = queryQueue.take();
           BoundedAccountingExecutor executor = request.getExecutor();
           executor.setBounds(new Semaphore(maxThreadsPerQuery));
-          request.getTableAccountant().incrementThreads();
+          request.getTableAccountant().startQuery();
           request.getExecutor().setTableAccountant(request.getTableAccountant());
           pendingQuries.decrementAndGet();
           queryRunners.submit(request.getQueryFutureTask());

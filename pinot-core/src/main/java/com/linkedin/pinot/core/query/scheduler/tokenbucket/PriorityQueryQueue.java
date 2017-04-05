@@ -83,20 +83,6 @@ public class PriorityQueryQueue implements SchedulerPriorityQueue {
     }
   }
 
-  @Override
-  public void markTaskDone(@Nonnull SchedulerQueryContext queryContext) {
-    queueLock.lock();
-    try {
-      TableTokenAccount tableTokenAccount = tableSchedulerInfo.get(queryContext.getQueryRequest().getTableName());
-      if (tableTokenAccount != null) {
-        tableTokenAccount.decrementThreads();
-      }
-      // ignore if null
-    } finally {
-      queueLock.unlock();
-    }
-  }
-
   private SchedulerQueryContext takeNextInternal() {
     int selectedTokens = Integer.MIN_VALUE;
     SchedulerQueryContext selectedQuery = null;
@@ -107,8 +93,8 @@ public class PriorityQueryQueue implements SchedulerPriorityQueue {
         continue;
       }
       int tableTokens = tableInfo.getAvailableTokens();
-      LOGGER.info("Table: {}, tokens: {}, pending queries: {}", tableInfoEntry.getKey(),
-          tableTokens, tableInfo.getPendingQueries().size());
+      // LOGGER.info(">>>>>>>>>>>>>>>>>>>>>>>>>>Table: {}, tokens: {}, pending queries: {}", tableInfoEntry.getKey(),
+      // tableTokens, tableInfo.getPendingQueries().size());
       if (tableTokens < selectedTokens) {
         continue;
       }
@@ -130,7 +116,7 @@ public class PriorityQueryQueue implements SchedulerPriorityQueue {
       String selectedTable = selectedQuery.getQueryRequest().getTableName();
       TableTokenAccount tableTokenAccount = tableSchedulerInfo.get(selectedTable);
       tableTokenAccount.getPendingQueries().remove(0);
-      LOGGER.info("Selected table: {}", selectedTable);
+      // LOGGER.info("Selected table: {}", selectedTable);
     }
     return selectedQuery;
   }

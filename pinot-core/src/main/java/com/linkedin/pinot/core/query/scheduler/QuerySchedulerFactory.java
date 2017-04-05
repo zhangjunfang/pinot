@@ -19,9 +19,8 @@ package com.linkedin.pinot.core.query.scheduler;
 import com.google.common.base.Preconditions;
 import com.linkedin.pinot.common.metrics.ServerMetrics;
 import com.linkedin.pinot.common.query.QueryExecutor;
-import com.linkedin.pinot.core.query.scheduler.tokenbucket.FCFSBScheduler;
-import java.lang.reflect.Constructor;
 import com.linkedin.pinot.core.query.scheduler.tokenbucket.TokenBucketScheduler;
+import java.lang.reflect.Constructor;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.commons.configuration.Configuration;
@@ -50,7 +49,8 @@ public class QuerySchedulerFactory {
 
     String schedulerName = schedulerConfig.getString(ALGORITHM_NAME_CONFIG_KEY,
         DEFAULT_QUERY_SCHEDULER_ALGORITHM).toLowerCase();
-
+    return new TokenBucketScheduler(schedulerConfig, queryExecutor, serverMetrics);
+    /*
     if (schedulerName.equals(FCFS_ALGORITHM)) {
       LOGGER.info("Using FCFS query scheduler");
       return new FCFSQueryScheduler(schedulerConfig, queryExecutor, serverMetrics);
@@ -78,6 +78,7 @@ public class QuerySchedulerFactory {
 
     LOGGER.warn("Scheduler {} not found. Using default FCFS query scheduler", schedulerName);
     return new FCFSQueryScheduler(schedulerConfig, queryExecutor, serverMetrics);
+    */
   }
 
   private static @Nullable QueryScheduler getQuerySchedulerByClassName(String className, Configuration schedulerConfig,
