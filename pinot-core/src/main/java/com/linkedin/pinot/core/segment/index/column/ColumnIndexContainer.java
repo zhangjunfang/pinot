@@ -48,6 +48,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public abstract class ColumnIndexContainer {
+  private static final Logger LOGGER = LoggerFactory.getLogger(ColumnIndexContainer.class);
+
   public static ColumnIndexContainer init(SegmentDirectory.Reader segmentReader, ColumnMetadata metadata,
       IndexLoadingConfig indexLoadingConfig)
       throws IOException {

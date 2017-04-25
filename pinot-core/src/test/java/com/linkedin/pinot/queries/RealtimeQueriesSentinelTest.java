@@ -275,7 +275,7 @@ public class RealtimeQueriesSentinelTest {
 
   private IndexSegment getRealtimeSegment() throws IOException {
     RealtimeSegmentImpl realtimeSegmentImpl = RealtimeSegmentImplTest.createRealtimeSegmentImpl(PINOT_SCHEMA, 100000, "testTable", "testTable_testTable", AVRO_DATA,
-        new ServerMetrics(new MetricsRegistry()), null);
+        new ServerMetrics(new MetricsRegistry()));
     realtimeSegmentImpl.setSegmentMetadata(getRealtimeSegmentZKMetadata());
     try {
       DataFileStream<GenericRecord> avroReader =

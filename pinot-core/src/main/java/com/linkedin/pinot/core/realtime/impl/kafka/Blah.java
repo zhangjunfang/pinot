@@ -20,8 +20,8 @@ package com.linkedin.pinot.core.realtime.impl.kafka;
  * A place for hacks
  */
 public class Blah {
-  public static final String KEY_COLUMN_NAME = "header__guid";
-  public static final boolean ENABLE_TIME_RANGE_FILTERING = false;
-  public static final boolean ENABLE_ROW_DEDUPE = false;
+  public static final String KEY_COLUMN_NAME = "key";
+  public static final boolean ENABLE_TIME_RANGE_FILTERING = true;
+  public static final boolean ENABLE_ROW_DEDUPE = true;
   public static final int MAX_KAFKA_PARTITION_COUNT = 20;
 }

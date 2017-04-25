@@ -119,7 +119,7 @@ public class RealtimeDedupeIntegrationTest extends RealtimeClusterIntegrationTes
     addSchema(pinotSchemaFile, pinotSchema.getSchemaName());
     addLLCRealtimeTable("mytable", "time", "MILLISECONDS", -1, "", KafkaStarterUtils.DEFAULT_KAFKA_BROKER, KAFKA_TOPIC,
         pinotSchema.getSchemaName(), null, null, avroFile , ROW_COUNT_FOR_REALTIME_SEGMENT_FLUSH, null,
-        Collections.<String>emptyList(), "MMAP", "key");
+        Collections.<String>emptyList(), "MMAP", null, null, "key");
 
 //    Uninterruptibles.sleepUninterruptibly(10, TimeUnit.MINUTES);
   }

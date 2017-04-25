@@ -26,3 +26,4 @@ public interface GenericRowFilter {
   GenericRow filter(GenericRow genericRow);
   void close();
 }
+

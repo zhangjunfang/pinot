@@ -37,7 +37,7 @@ public class RealtimeSegmentImplTest {
   public static RealtimeSegmentImpl createRealtimeSegmentImpl(Schema schema, int sizeThresholdToFlushSegment, String tableName, String segmentName, String streamName,
       ServerMetrics serverMetrics) throws IOException {
     return new RealtimeSegmentImpl(schema, sizeThresholdToFlushSegment, tableName, segmentName, streamName, serverMetrics, new ArrayList<String>(),
-        2);
+        2, null);
   }
   @Test
   public void testDropInvalidRows() throws Exception {
@@ -49,7 +49,7 @@ public class RealtimeSegmentImplTest {
         .build();
 
     RealtimeSegmentImpl realtimeSegment = createRealtimeSegmentImpl(schema, 100, "noTable", "noSegment",
-        schema.getSchemaName(), new ServerMetrics(new MetricsRegistry()), null);
+        schema.getSchemaName(), new ServerMetrics(new MetricsRegistry()));
 
     // Segment should be empty
     Assert.assertEquals(realtimeSegment.getRawDocumentCount(), 0);

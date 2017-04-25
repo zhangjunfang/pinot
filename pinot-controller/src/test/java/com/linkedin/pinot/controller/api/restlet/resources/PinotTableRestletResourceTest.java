@@ -94,7 +94,7 @@ public class PinotTableRestletResourceTest extends ControllerTest {
 
     request = ControllerRequestBuilder.buildCreateRealtimeTableJSON("bad__table__name", "default", "default",
         "potato", "DAYS", "DAYS", "5", 3, "BalanceNumSegmentAssignmentStrategy", metadata, "fakeSchema", "fakeColumn",
-        Collections.<String>emptyList(), "MMAP", true, null);
+        Collections.<String>emptyList(), "MMAP", true, null, null, null);
 
     try {
       sendPostRequest(ControllerRequestURLBuilder.baseUrl(CONTROLLER_BASE_API_URL).forTableCreate(),
@@ -107,7 +107,7 @@ public class PinotTableRestletResourceTest extends ControllerTest {
     // Create a table with a valid name
     request = ControllerRequestBuilder.buildCreateRealtimeTableJSON("valid_table_name", "default", "default",
         "potato", "DAYS", "DAYS", "5", 3, "BalanceNumSegmentAssignmentStrategy", metadata, "fakeSchema", "fakeColumn",
-        Collections.<String>emptyList(), "MMAP", true, null);
+        Collections.<String>emptyList(), "MMAP", true, null, null, null);
 
     sendPostRequest(ControllerRequestURLBuilder.baseUrl(CONTROLLER_BASE_API_URL).forTableCreate(), request.toString());
 
@@ -148,7 +148,7 @@ public class PinotTableRestletResourceTest extends ControllerTest {
 
     request = ControllerRequestBuilder.buildCreateRealtimeTableJSON(tableName, "default", "default",
         "potato", "DAYS", "DAYS", "5", tableReplication, "BalanceNumSegmentAssignmentStrategy", metadata, "fakeSchema", "fakeColumn",
-        Collections.<String>emptyList(), "MMAP", false /*lowLevel*/);
+        Collections.<String>emptyList(), "MMAP", false /*lowLevel*/, null, null, null);
     sendPostRequest(ControllerRequestURLBuilder.baseUrl(CONTROLLER_BASE_API_URL).forTableCreate(), request.toString());
     tableConfig = getTableConfig(tableName, "REALTIME");
     Assert.assertEquals(tableConfig.getValidationConfig().getReplicationNumber(),
@@ -206,7 +206,7 @@ public class PinotTableRestletResourceTest extends ControllerTest {
 
     request = ControllerRequestBuilder.buildCreateRealtimeTableJSON(tableName, "default", "default",
         "potato", "DAYS", "DAYS", "5", 2, "BalanceNumSegmentAssignmentStrategy", metadata, "fakeSchema", "fakeColumn",
-        Collections.<String>emptyList(), "MMAP", false /*lowLevel*/);
+        Collections.<String>emptyList(), "MMAP", false /*lowLevel*/, null, null, null);
     sendPostRequest(ControllerRequestURLBuilder.baseUrl(CONTROLLER_BASE_API_URL).forTableCreate(), request.toString());
     tableConfig = getTableConfig(tableName, "REALTIME");
     Assert.assertEquals(tableConfig.getValidationConfig().getRetentionTimeValue(), "5");

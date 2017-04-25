@@ -37,6 +37,9 @@ import com.linkedin.pinot.common.utils.TarGzCompressionUtils;
 import com.linkedin.pinot.core.data.GenericRow;
 import com.linkedin.pinot.core.data.extractors.FieldExtractorFactory;
 import com.linkedin.pinot.core.data.extractors.PlainFieldExtractor;
+import com.linkedin.pinot.core.data.filter.DictionaryGenericRowFilter;
+import com.linkedin.pinot.core.data.filter.GenericRowFilter;
+import com.linkedin.pinot.core.data.filter.KeepAllGenericRowFilter;
 import com.linkedin.pinot.core.data.manager.offline.SegmentDataManager;
 import com.linkedin.pinot.core.data.partition.PartitionFunctionFactory;
 import com.linkedin.pinot.core.indexsegment.IndexSegment;
@@ -45,6 +48,7 @@ import com.linkedin.pinot.common.config.SegmentPartitionConfig;
 import com.linkedin.pinot.core.indexsegment.generator.SegmentVersion;
 import com.linkedin.pinot.core.realtime.converter.RealtimeSegmentConverter;
 import com.linkedin.pinot.core.realtime.impl.RealtimeSegmentImpl;
+import com.linkedin.pinot.core.realtime.impl.kafka.Blah;
 import com.linkedin.pinot.core.realtime.impl.kafka.KafkaLowLevelStreamProviderConfig;
 import com.linkedin.pinot.core.realtime.impl.kafka.KafkaMessageDecoder;
 import com.linkedin.pinot.core.realtime.impl.kafka.KafkaSimpleConsumerFactoryImpl;
@@ -532,7 +536,6 @@ public class LLRealtimeSegmentDataManager extends SegmentDataManager {
   }
 
   private boolean buildSegmentInternal(boolean forCommit) {
-  protected boolean buildSegment(boolean buildTgz) {
     Runtime runtime = Runtime.getRuntime();
     runtime.gc();
     LOGGER.info("Used memory before building segment: {}", runtime.totalMemory() - runtime.freeMemory());
@@ -595,7 +598,7 @@ public class LLRealtimeSegmentDataManager extends SegmentDataManager {
         _rowFilter.close();
       }
 
-      _realtimeTableDataManager.replaceLLSegment(_segmentNameStr);
+      _realtimeTableDataManager.replaceLLSegment(_segmentNameStr, _indexLoadingConfig);
     } catch (FileNotFoundException e) {
       segmentLogger.error("Tar file {} not found", segTarFileName, e);
       return false;

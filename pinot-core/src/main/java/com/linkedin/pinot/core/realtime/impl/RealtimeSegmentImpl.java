@@ -15,6 +15,9 @@
  */
 package com.linkedin.pinot.core.realtime.impl;
 
+import com.clearspring.analytics.stream.membership.BloomFilter;
+import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
 import com.linkedin.pinot.common.config.SegmentPartitionConfig;
 import com.linkedin.pinot.common.data.FieldSpec;
 import com.linkedin.pinot.common.data.FieldSpec.FieldType;

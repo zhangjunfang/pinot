@@ -256,7 +256,8 @@ public abstract class ClusterTest extends ControllerTest {
     AvroFileSchemaKafkaAvroMessageDecoder.avroFile = avroFile;
     JSONObject request = ControllerRequestBuilder.buildCreateRealtimeTableJSON(tableName, serverTenant, brokerTenant,
         timeColumnName, timeColumnType, retentionTimeUnit, Integer.toString(retentionDays), 1,
-        "BalanceNumSegmentAssignmentStrategy", streamConfig, schemaName, sortedColumn, invertedIndexColumns, null, true, null);
+        "BalanceNumSegmentAssignmentStrategy", streamConfig, schemaName, sortedColumn,
+        invertedIndexColumns, null, true, null, null, null);
     sendPostRequest(ControllerRequestURLBuilder.baseUrl(CONTROLLER_BASE_API_URL).forTableCreate(), request.toString());
   }
 
@@ -268,7 +269,7 @@ public abstract class ClusterTest extends ControllerTest {
     addLLCRealtimeTable(tableName, timeColumnName, timeColumnType, retentionDays,
     retentionTimeUnit, kafkaBrokerList, kafkaTopic, schemaName, serverTenant,
         brokerTenant, avroFile, realtimeSegmentFlushSize, sortedColumn,
-        invertedIndexColumns, loadMode, null, new HashMap<String,String>());
+        invertedIndexColumns, loadMode, null, new HashMap<String,String>(), null);
   }
 
   protected void addLLCRealtimeTable(String tableName, String timeColumnName, String timeColumnType, int retentionDays,
@@ -305,7 +306,7 @@ public abstract class ClusterTest extends ControllerTest {
     if (useLlc) {
       addLLCRealtimeTable(tableName, timeColumnName, timeColumnType, retentionDays, retentionTimeUnit, KafkaStarterUtils.DEFAULT_KAFKA_BROKER,
           kafkaTopic, schemaName, serverTenant, brokerTenant, avroFile, getRealtimeSegmentFlushSize(useLlc),
-          sortedColumn, invertedIndexColumns, loadMode, null);
+          sortedColumn, invertedIndexColumns, loadMode, null, null, null);
     } else {
       addRealtimeTable(tableName, timeColumnName, timeColumnType, retentionDays, retentionTimeUnit, kafkaZkUrl,
           kafkaTopic, schemaName, serverTenant, brokerTenant, avroFile, getRealtimeSegmentFlushSize(useLlc),

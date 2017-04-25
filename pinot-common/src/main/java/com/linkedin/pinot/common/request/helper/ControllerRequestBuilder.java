@@ -99,39 +99,9 @@ public class ControllerRequestBuilder {
 
   public static JSONObject buildCreateRealtimeTableJSON(String tableName, String serverTenant, String brokerTenant,
       String timeColumnName, String timeType, String retentionTimeUnit, String retentionTimeValue, int numReplicas,
-      String segmentAssignmentStrategy, JSONObject streamConfigs, String schemaName, String sortedColumn)
-      throws JSONException {
-    List<String> invertedIndexColumns = Collections.emptyList();
-    return buildCreateRealtimeTableJSON(tableName, serverTenant, brokerTenant, timeColumnName, timeType, retentionTimeUnit,
-        retentionTimeValue, numReplicas, segmentAssignmentStrategy, streamConfigs, schemaName, sortedColumn,
-        invertedIndexColumns, null, true, null);
-  }
-
-  public static JSONObject buildCreateRealtimeTableJSON(String tableName, String serverTenant, String brokerTenant,
-      String timeColumnName, String timeType, String retentionTimeUnit, String retentionTimeValue, int numReplicas,
-      String segmentAssignmentStrategy, JSONObject streamConfigs, String schemaName, String sortedColumn,
-      List<String> invertedIndexColumns, String loadMode, boolean isHighLevel, String keyColumn)
-          throws JSONException {
-    return buildCreateRealtimeTableJSON(tableName, serverTenant, brokerTenant, timeColumnName, timeType, retentionTimeUnit,
-        retentionTimeValue, numReplicas, segmentAssignmentStrategy, streamConfigs, schemaName, sortedColumn,
-        invertedIndexColumns, loadMode, isHighLevel, null);
-  }
-
-  public static JSONObject buildCreateRealtimeTableJSON(String tableName, String serverTenant, String brokerTenant,
-        String timeColumnName, String timeType, String retentionTimeUnit, String retentionTimeValue, int numReplicas,
-    String segmentAssignmentStrategy, JSONObject streamConfigs, String schemaName, String sortedColumn,
-        List<String> invertedIndexColumns, String loadMode, boolean isHighLevel, List<String> noDictionaryColumns)
-      throws JSONException {
-    return buildCreateRealtimeTableJSON(tableName, serverTenant, brokerTenant, timeColumnName, timeType,
-        retentionTimeUnit, retentionTimeValue, numReplicas, segmentAssignmentStrategy, streamConfigs, schemaName,
-        sortedColumn, invertedIndexColumns, loadMode, isHighLevel, null, null);
-  }
-
-  public static JSONObject buildCreateRealtimeTableJSON(String tableName, String serverTenant, String brokerTenant,
-      String timeColumnName, String timeType, String retentionTimeUnit, String retentionTimeValue, int numReplicas,
       String segmentAssignmentStrategy, JSONObject streamConfigs, String schemaName, String sortedColumn,
       List<String> invertedIndexColumns, String loadMode, boolean isHighLevel, List<String> noDictionaryColumns,
-      Map<String, String> partitioners)
+      Map<String, String> partitioners, String keyColumn)
       throws JSONException {
     JSONObject creationRequest = new JSONObject();
     creationRequest.put("tableName", tableName);
