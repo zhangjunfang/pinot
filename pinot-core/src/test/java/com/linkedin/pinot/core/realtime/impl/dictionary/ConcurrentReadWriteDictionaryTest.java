@@ -97,10 +97,10 @@ public class ConcurrentReadWriteDictionaryTest {
   private void testRealtimeDictionary(boolean onHeap) throws Exception {
     final int estCardinality = 943;
     final int numValues = estCardinality * 107;
-    FieldSpec.DataType[] dataTypes = new FieldSpec.DataType[] {FieldSpec.DataType.INT, FieldSpec.DataType.LONG, FieldSpec.DataType.FLOAT, FieldSpec.DataType.DOUBLE, FieldSpec.DataType.STRING};
+    FieldSpec.DataType[] dataTypes = new FieldSpec.DataType[] {FieldSpec.DataType.STRING};
     int numEntries;
     final Map<Object, Integer> valueToDictId = new HashMap<>();
-    final int[] overflowSizes = new int[] {0, 2000};
+    final int[] overflowSizes = new int[] {0};
 
     for (FieldSpec.DataType dataType : dataTypes) {
       for (int overflowSize : overflowSizes) {
@@ -118,6 +118,11 @@ public class ConcurrentReadWriteDictionaryTest {
               Assert.assertEquals(dictId, numEntries++);
               valueToDictId.put(x, dictId);
             }
+            if (numValues % 1000 == 0) {
+
+              System.out.println("processed " + numValues +" values");
+            }
+
           } catch (Throwable t) {
             t.printStackTrace();
             Assert.fail("Failed with seed " + SEED + " iteration " + i + " for dataType " + dataType.toString() + " overflowsize=" + overflowSize);
@@ -130,7 +135,7 @@ public class ConcurrentReadWriteDictionaryTest {
 
   @Test
   public void testRealtimeDictionary() throws Exception {
-    testRealtimeDictionary(true);
+//    testRealtimeDictionary(true);
     testRealtimeDictionary(false);
   }
 

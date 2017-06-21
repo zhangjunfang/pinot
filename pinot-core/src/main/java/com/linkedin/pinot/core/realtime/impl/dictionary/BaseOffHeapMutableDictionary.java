@@ -346,7 +346,7 @@ public abstract class BaseOffHeapMutableDictionary extends MutableDictionary {
     return 1 << power;
   }
 
-  protected int getDictId(@Nonnull Object rawValue) {
+  protected int getDictId(@Nonnull Object rawValue, byte[] serializedValue) {
     final long hashVal = Math.abs(rawValue.hashCode());
     final ValueToDictId valueToDictId = _valueToDict;
     final List<IntBuffer> iBufList = valueToDictId.getIBufList();
@@ -356,7 +356,7 @@ public abstract class BaseOffHeapMutableDictionary extends MutableDictionary {
       for (int i = offsetInBuf; i < offsetInBuf + NUM_COLUMNS; i++) {
         int dictId = iBuf.get(i);
         if (dictId != NULL_VALUE_INDEX) {
-          if (equalsValueAt(dictId, rawValue)) {
+          if (equalsValueAt(dictId, rawValue, serializedValue)) {
             return dictId;
           }
         }
@@ -372,7 +372,7 @@ public abstract class BaseOffHeapMutableDictionary extends MutableDictionary {
     return dictId;
   }
 
-  protected void indexValue(@Nonnull Object value) {
+  protected void indexValue(@Nonnull Object value, byte[] serializedValue) {
     final long hashVal = Math.abs(value.hashCode());
     ValueToDictId valueToDictId = _valueToDict;
     final List<IntBuffer> iBufList = valueToDictId.getIBufList();
@@ -383,11 +383,11 @@ public abstract class BaseOffHeapMutableDictionary extends MutableDictionary {
       for (int i = offsetInBuf; i < offsetInBuf + NUM_COLUMNS; i++) {
         final int dictId = iBuf.get(i);
         if (dictId == NULL_VALUE_INDEX) {
-          setRawValueAt(_numEntries, value);
+          setRawValueAt(_numEntries, value, serializedValue);
           iBuf.put(i, _numEntries++);
           return;
         }
-        if (equalsValueAt(dictId, value)) {
+        if (equalsValueAt(dictId, value, serializedValue)) {
           return;
         }
       }
@@ -401,7 +401,7 @@ public abstract class BaseOffHeapMutableDictionary extends MutableDictionary {
       }
     }
 
-    setRawValueAt(_numEntries, value);
+    setRawValueAt(_numEntries, value, serializedValue);
 
     if (_maxItemsInOverflowHash > 0) {
       if (overflowMap.size() < _maxItemsInOverflowHash) {
@@ -474,12 +474,12 @@ public abstract class BaseOffHeapMutableDictionary extends MutableDictionary {
     return rowsWith1Col;
   }
 
-  protected boolean equalsValueAt(int dictId, Object value) {
+  protected boolean equalsValueAt(int dictId, Object value, byte[] serializedValue) {
     return value.equals(get(dictId));
   }
 
   public abstract void doClose() throws IOException;
 
-  protected abstract void setRawValueAt(int dictId, Object rawValue);
+  protected abstract void setRawValueAt(int dictId, Object rawValue, byte[] serializedValue);
 
 }
