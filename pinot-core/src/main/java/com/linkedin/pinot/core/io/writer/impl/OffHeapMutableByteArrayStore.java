@@ -186,8 +186,7 @@ public class OffHeapMutableByteArrayStore implements Closeable {
   }
 
   private Buffer expand() {
-    Buffer lastBuffer = _buffers.get(_buffers.size()-1);
-    Buffer newBuffer = expand(lastBuffer.getSize());
+    Buffer newBuffer = expand(_currentBuffer.getSize() * 2);
     return newBuffer;
   }
 

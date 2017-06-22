@@ -28,8 +28,8 @@ import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.TimeValue;
-import com.linkedin.pinot.core.realtime.impl.dictionary.LongOffHeapMutableDictionary;
-import com.linkedin.pinot.core.realtime.impl.dictionary.LongOnHeapMutableDictionary;
+import com.linkedin.pinot.core.realtime.impl.dictionary.StringOffHeapMutableDictionary;
+import com.linkedin.pinot.core.realtime.impl.dictionary.StringOffHeapMutableDictionary2;
 
 
 @State(Scope.Benchmark)
@@ -37,6 +37,7 @@ public class BenchmarkDictionary {
   private Long[] colValues;
   private final int ROW_COUNT = 2_500_000;
   private long[] uniqueColValues;
+  private String[] stringValues;
   private final int CARDINALITY = 1_000_000;
 
   @Setup
@@ -47,11 +48,41 @@ public class BenchmarkDictionary {
       uniqueColValues[i] = (long)(Math.random() * Long.MAX_VALUE);
     }
     colValues = new Long[ROW_COUNT];
+    stringValues = new String[ROW_COUNT];
     for (int i = 0; i < colValues.length; i++) {
-      colValues[i] = uniqueColValues[(int)(Math.random() * CARDINALITY)];
+      int u = (int)(Math.random() * CARDINALITY);
+      colValues[i] = uniqueColValues[u];
+      stringValues[i] = String.valueOf(uniqueColValues[u]);
     }
   }
 
+  @Benchmark
+  @BenchmarkMode(Mode.SampleTime)
+  @OutputTimeUnit(TimeUnit.MILLISECONDS)
+  public StringOffHeapMutableDictionary benchmarkStringOffHeapCharStore() {
+    StringOffHeapMutableDictionary dictionary = new StringOffHeapMutableDictionary(10, 10);
+
+    for (int i = 0; i < stringValues.length; i++) {
+      dictionary.index(stringValues[i]);
+    }
+
+    return dictionary;
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.SampleTime)
+  @OutputTimeUnit(TimeUnit.MILLISECONDS)
+  public StringOffHeapMutableDictionary2 benchmarkStringOffHeapByteStore() {
+    StringOffHeapMutableDictionary2 dictionary = new StringOffHeapMutableDictionary2(10, 10);
+
+    for (int i = 0; i < stringValues.length; i++) {
+      dictionary.index(stringValues[i]);
+    }
+
+    return dictionary;
+  }
+
+  /*
   @Benchmark
   @BenchmarkMode(Mode.SampleTime)
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
@@ -149,6 +180,7 @@ public class BenchmarkDictionary {
 
     return dictionary;
   }
+  */
 
 
   public static void main(String[] args) throws Exception {
