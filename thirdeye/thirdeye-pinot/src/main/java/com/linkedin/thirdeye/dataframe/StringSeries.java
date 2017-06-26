@@ -143,7 +143,7 @@ public final class StringSeries extends TypedSeries<StringSeries> {
   }
 
   // CAUTION: The array is final, but values are inherently modifiable
-  private final String[] values;
+  final String[] values;
 
   private StringSeries(String... values) {
     this.values = values;
@@ -205,17 +205,6 @@ public final class StringSeries extends TypedSeries<StringSeries> {
 
   public static String getString(String string) {
     return string;
-  }
-
-  @Override
-  public Object getObject(int index) {
-    return getObject(this.values[index]);
-  }
-
-  public static Object getObject(String value) {
-    if(isNull(value))
-      return ObjectSeries.NULL;
-    return value;
   }
 
   @Override
