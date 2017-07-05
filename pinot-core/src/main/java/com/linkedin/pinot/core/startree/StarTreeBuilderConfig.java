@@ -37,8 +37,9 @@ public class StarTreeBuilderConfig {
   private Set<String> skipMaterializationForDimensions;
   private int skipMaterializationCardinalityThreshold =
       StarTreeIndexSpec.DEFAULT_SKIP_MATERIALIZATION_CARDINALITY_THRESHOLD;
-  private boolean enableOffHealpFormat;
-
+  private boolean enableOffHeapFormat;
+  private boolean excludeHighCardinalityColumnsFromStarTreeIndex;
+  
   public StarTreeBuilderConfig() {
   }
 
@@ -113,15 +114,28 @@ public class StarTreeBuilderConfig {
    * Returns True if StarTreeOffHeap is enabled, false otherwise.
    * @return
    */
-  public boolean isEnableOffHealpFormat() {
-    return enableOffHealpFormat;
+  public boolean isEnableOffHeapFormat() {
+    return enableOffHeapFormat;
+  }
+
+  
+  public boolean isExcludeHighCardinalityColumnsFromStarTreeIndex() {
+    return excludeHighCardinalityColumnsFromStarTreeIndex;
+  }
+
+  /**
+   * Remove high cardinality items (including columns specified in skipMaterialization) and aggregates the data and then generate the star tree index on that data. 
+   * @param excludeHighCardinalityColumnsFromStarTreeIndex
+   */
+  public void setExcludeHighCardinalityColumnsFromStarTreeIndex(boolean excludeHighCardinalityColumnsFromStarTreeIndex) {
+    this.excludeHighCardinalityColumnsFromStarTreeIndex = excludeHighCardinalityColumnsFromStarTreeIndex;
   }
 
   /**
    * Enable/Disable StarTreeOffHeap
    * @param enableOffHealpFormat
    */
-  public void setEnableOffHealpFormat(boolean enableOffHealpFormat) {
-    this.enableOffHealpFormat = enableOffHealpFormat;
+  public void setEnableOffHeapFormat(boolean enableOffHeapFormat) {
+    this.enableOffHeapFormat = enableOffHeapFormat;
   }
 }

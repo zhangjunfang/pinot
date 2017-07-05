@@ -39,6 +39,7 @@ import com.linkedin.pinot.common.response.BrokerResponseFactory.ResponseType;
 import com.linkedin.pinot.common.response.ProcessingException;
 import com.linkedin.pinot.common.response.ServerInstance;
 import com.linkedin.pinot.common.utils.CommonConstants;
+import static com.linkedin.pinot.common.utils.CommonConstants.Broker.*;
 import com.linkedin.pinot.common.utils.DataTable;
 import com.linkedin.pinot.core.common.datatable.DataTableFactory;
 import com.linkedin.pinot.pql.parsers.Pql2Compiler;
@@ -82,25 +83,9 @@ public class BrokerRequestHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(BrokerRequestHandler.class);
   private static final Pql2Compiler REQUEST_COMPILER = new Pql2Compiler();
 
-  private static final int DEFAULT_BROKER_QUERY_RESPONSE_LIMIT = Integer.MAX_VALUE;
-  private static final String BROKER_QUERY_RESPONSE_LIMIT_CONFIG = "pinot.broker.query.response.limit";
-  public static final long DEFAULT_BROKER_TIME_OUT_MS = 10 * 1000L;
-  private static final String BROKER_TIME_OUT_CONFIG = "pinot.broker.timeoutMs";
-  private static final String DEFAULT_BROKER_ID;
-  public static final String BROKER_ID_CONFIG_KEY = "pinot.broker.id";
   private static final ResponseType DEFAULT_BROKER_RESPONSE_TYPE = ResponseType.BROKER_RESPONSE_TYPE_NATIVE;
   private final SegmentZKMetadataPrunerService _segmentPrunerService;
-
-  static {
-    String defaultBrokerId = "";
-    try {
-      defaultBrokerId = InetAddress.getLocalHost().getHostName();
-    } catch (UnknownHostException e) {
-      LOGGER.error("Failed to read default broker id.", e);
-    }
-    DEFAULT_BROKER_ID = defaultBrokerId;
-  }
-
+  
   private final RoutingTable _routingTable;
   private final ScatterGather _scatterGatherer;
   private final ReduceServiceRegistry _reduceServiceRegistry;
@@ -127,7 +112,7 @@ public class BrokerRequestHandler {
     _requestIdGenerator = new AtomicLong(0);
     _queryResponseLimit = config.getInt(BROKER_QUERY_RESPONSE_LIMIT_CONFIG, DEFAULT_BROKER_QUERY_RESPONSE_LIMIT);
     _brokerTimeOutMs = config.getLong(BROKER_TIME_OUT_CONFIG, DEFAULT_BROKER_TIME_OUT_MS);
-    _brokerId = config.getString(BROKER_ID_CONFIG_KEY, DEFAULT_BROKER_ID);
+    _brokerId = config.getString(BROKER_ID_CONFIG_KEY, getDefaultBrokerId());
     _segmentPrunerService = segmentPrunerService;
 
     LOGGER.info("Broker response limit is: " + _queryResponseLimit);
@@ -659,6 +644,18 @@ public class BrokerRequestHandler {
       }
     }
   }
+  
+  public String getDefaultBrokerId() {
+    String defaultBrokerId = "";
+    try {
+      defaultBrokerId = InetAddress.getLocalHost().getHostName();
+    } catch (UnknownHostException e) {
+      LOGGER.error("Failed to read default broker id.", e);
+    }
+    return defaultBrokerId;
+  }
+
+
 
   /**
    * Container for time statistics in all phases.

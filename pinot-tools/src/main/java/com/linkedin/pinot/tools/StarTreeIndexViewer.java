@@ -22,6 +22,7 @@ import com.linkedin.pinot.core.startree.StarTreeSerDe;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -99,6 +100,7 @@ public class StarTreeIndexViewer {
     String writeValueAsString =
         objectMapper.defaultPrettyPrintingWriter().writeValueAsString(jsonRoot);
     LOGGER.info(writeValueAsString);
+    int records = countRawRecords(tree.getRoot(), true);
     startServer(segmentDir, writeValueAsString);
   }
 
@@ -160,7 +162,29 @@ public class StarTreeIndexViewer {
     }
     return totalChildNodes;
   }
+  
+  private int countRawRecords(StarTreeIndexNodeInterf node, boolean isAllNodePath) {
+    Iterator<? extends StarTreeIndexNodeInterf> childrenIterator = node.getChildrenIterator();
+    int rawRecordCount = 0;
 
+    while (childrenIterator.hasNext()) {
+      StarTreeIndexNodeInterf next = childrenIterator.next();
+      if (next.isLeaf()) {
+        if(next.getDimensionValue() != StarTreeIndexNodeInterf.ALL){
+          rawRecordCount += (next.getEndDocumentId() - node.getStartDocumentId());;
+        }
+      } else {
+         rawRecordCount += countRawRecords(next,
+            isAllNodePath && next.getDimensionValue() == StarTreeIndexNodeInterf.ALL);
+        
+      }
+    }
+    if(isAllNodePath) {
+      LOGGER.info("Num Records at {}:{} is {}", dimensionNameToIndexMap.inverse().get(node.getDimensionName()), node.getDimensionValue() , rawRecordCount);
+    }
+    return rawRecordCount;
+  }
+  
   public static void main(String[] args) throws Exception {
     if (args.length != 1) {
       LOGGER.error("USAGE: StarIndexViewer <segmentDirectory>");
@@ -179,20 +203,31 @@ public class StarTreeIndexViewer {
     int port = 8090;
     component.getServers().add(Protocol.HTTP, port);
     component.getClients().add(Protocol.FILE);
+    component.getClients().add(Protocol.JAR);
     Application application = new Application() {
       @Override
       public Restlet createInboundRoot() {
         Router router = new Router(getContext());
         StarTreeViewRestResource.json = json;
+//        router.attach("/data", StarTreeViewRestResource.class);
+//        Directory directory = new Directory(getContext(),
+//            getClass().getClassLoader().getResource("star-tree.html").toString());
+//        router.attach(directory);
+//        return router;
         router.attach("/data", StarTreeViewRestResource.class);
         Directory directory = new Directory(getContext(),
-            getClass().getClassLoader().getResource("star-tree.html").toString());
-        router.attach(directory);
+            getClass().getClassLoader().getResource("startree").toString());
+        directory.setIndexName("star-tree.html");
+        router.attach("/startree", directory);
         return router;
       }
     };
-    VirtualHost defaultHost = component.getDefaultHost();
-    defaultHost.attach(application);
+    
+    List<VirtualHost> hosts = component.getHosts();
+    for (VirtualHost virtualHost : hosts) {
+      virtualHost.attach(application);
+    }
+    component.getDefaultHost().attach(application);
     component.start();
     LOGGER.info("Go to http://{}:{}/  to view the star tree", VirtualHost.getLocalHostName(), port );
   }

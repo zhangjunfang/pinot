@@ -17,8 +17,8 @@ package com.linkedin.pinot.tools.perf;
 
 import com.google.common.base.Preconditions;
 import com.linkedin.pinot.broker.broker.helix.HelixBrokerStarter;
+import com.linkedin.pinot.broker.requesthandler.BrokerRequestHandler;
 import com.linkedin.pinot.common.config.TableConfig;
-import com.linkedin.pinot.common.config.TableNameBuilder;
 import com.linkedin.pinot.common.config.Tenant;
 import com.linkedin.pinot.common.config.Tenant.TenantBuilder;
 import com.linkedin.pinot.common.segment.SegmentMetadata;
@@ -87,8 +87,10 @@ public class PerfBenchmarkDriver {
 
   private PinotHelixResourceManager _helixResourceManager;
 
+  private static final int BROKER_TIME_OUT = 60_000;
+
   public PerfBenchmarkDriver(PerfBenchmarkDriverConf conf) {
-    this(conf, "/tmp/", "HEAP", null, false);
+    this(conf, "/tmp/", "HEAP", "v1", false);
   }
 
   public PerfBenchmarkDriver(PerfBenchmarkDriverConf conf, String tempDir, String loadMode, String segmentFormatVersion,
@@ -209,6 +211,7 @@ public class PerfBenchmarkDriver {
     Configuration brokerConfiguration = new PropertiesConfiguration();
     String brokerInstanceName = "Broker_localhost_" + CommonConstants.Helix.DEFAULT_BROKER_QUERY_PORT;
     brokerConfiguration.setProperty(CommonConstants.Helix.Instance.INSTANCE_ID_KEY, brokerInstanceName);
+    brokerConfiguration.setProperty(CommonConstants.Broker.BROKER_TIME_OUT_CONFIG, BROKER_TIME_OUT);
     LOGGER.info("Starting broker instance: {}", brokerInstanceName);
     new HelixBrokerStarter(_clusterName, _zkAddress, brokerConfiguration);
   }
@@ -223,9 +226,7 @@ public class PerfBenchmarkDriver {
     serverConfiguration.addProperty(CommonConstants.Server.CONFIG_OF_INSTANCE_DATA_DIR, _serverInstanceDataDir);
     serverConfiguration.addProperty(CommonConstants.Server.CONFIG_OF_INSTANCE_SEGMENT_TAR_DIR,
         _serverInstanceSegmentTarDir);
-    if (_segmentFormatVersion != null) {
-      serverConfiguration.setProperty(CommonConstants.Server.CONFIG_OF_SEGMENT_FORMAT_VERSION, _segmentFormatVersion);
-    }
+    serverConfiguration.setProperty(CommonConstants.Server.CONFIG_OF_SEGMENT_FORMAT_VERSION, _segmentFormatVersion);
     serverConfiguration.setProperty(CommonConstants.Helix.Instance.INSTANCE_ID_KEY, _serverInstanceName);
     LOGGER.info("Starting server instance: {}", _serverInstanceName);
     new HelixServerStarter(_clusterName, _zkAddress, serverConfiguration);
@@ -313,12 +314,6 @@ public class PerfBenchmarkDriver {
         LOGGER.info("Waiting for the cluster to be set up and indexes to be loaded on the servers" + new Timestamp(
             System.currentTimeMillis()));
         for (String resourceName : resourcesInCluster) {
-          // Only check table resources and broker resource
-          if (!TableNameBuilder.isTableResource(resourceName) && !resourceName.equals(
-              CommonConstants.Helix.BROKER_RESOURCE_INSTANCE)) {
-            continue;
-          }
-
           IdealState idealState = helixAdmin.getResourceIdealState(clusterName, resourceName);
           ExternalView externalView = helixAdmin.getResourceExternalView(clusterName, resourceName);
           if (idealState == null || externalView == null) {

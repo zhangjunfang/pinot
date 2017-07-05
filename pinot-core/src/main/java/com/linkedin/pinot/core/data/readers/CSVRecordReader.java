@@ -18,7 +18,12 @@ package com.linkedin.pinot.core.data.readers;
 import com.linkedin.pinot.common.data.FieldSpec;
 import com.linkedin.pinot.common.data.Schema;
 import com.linkedin.pinot.core.data.GenericRow;
+
+import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.FileReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.Reader;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -26,6 +31,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.zip.GZIPInputStream;
+
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -58,9 +65,14 @@ public class CSVRecordReader extends BaseRecordReader {
 
   @Override
   public void init() throws Exception {
-    final Reader reader = new FileReader(_fileName);
-    _parser = new CSVParser(reader, getFormat());
-
+    InputStream fileStream = new FileInputStream(_fileName);
+    InputStream inputStream = fileStream;
+    if(_fileName.endsWith(".gz")) {
+      inputStream = new GZIPInputStream(fileStream);
+    } 
+    Reader decoder = new InputStreamReader(inputStream, "UTF-8");
+    BufferedReader bufferedReader = new BufferedReader(decoder);
+    _parser = new CSVParser(bufferedReader, getFormat());
     _iterator = _parser.iterator();
   }
 
@@ -72,7 +84,14 @@ public class CSVRecordReader extends BaseRecordReader {
 
   @Override
   public boolean hasNext() {
-    return _iterator.hasNext();
+    try {
+      boolean next = _iterator.hasNext();
+      return next;
+    } catch (Exception e) {
+      _logger.warn("Skipping row due to exception:{} ", e.getMessage());
+      // skip this record and move to next
+      return hasNext();
+    }
   }
 
   @Override
@@ -91,6 +110,9 @@ public class CSVRecordReader extends BaseRecordReader {
 
     for (final FieldSpec fieldSpec : _schema.getAllFieldSpecs()) {
       String column = fieldSpec.getName();
+      if (!record.isMapped(column)) {
+        continue;
+      }
       String token = getValueForColumn(record, column);
 
       Object value = null;

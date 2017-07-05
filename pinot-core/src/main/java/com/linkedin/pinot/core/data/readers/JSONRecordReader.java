@@ -78,6 +78,9 @@ public class JSONRecordReader extends BaseRecordReader {
 
     for (final FieldSpec fieldSpec : _schema.getAllFieldSpecs()) {
       String column = fieldSpec.getName();
+      if(!record.containsKey(column)){
+        continue;
+      }
       Object data = record.get(column);
 
       Object value=null;

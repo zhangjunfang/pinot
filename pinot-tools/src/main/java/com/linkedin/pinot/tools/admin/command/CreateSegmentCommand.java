@@ -18,10 +18,14 @@ package com.linkedin.pinot.tools.admin.command;
 import com.linkedin.pinot.core.data.readers.FileFormat;
 import com.linkedin.pinot.core.indexsegment.generator.SegmentGeneratorConfig;
 import com.linkedin.pinot.core.segment.creator.impl.SegmentIndexCreationDriverImpl;
+import com.linkedin.pinot.core.startree.hll.HllConfig;
+import com.linkedin.pinot.core.startree.hll.HllConstants;
 import com.linkedin.pinot.tools.Command;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -74,6 +78,15 @@ public class CreateSegmentCommand extends AbstractBaseAdminCommand implements Co
       usage = "Config file for star tree index.")
   private String _starTreeIndexSpecFile;
 
+  @Option(name = "-hllSize", required = false, metaVar = "<5,6,7,8,9>", usage = "HLL size (log scale), default is 9")
+  private int _hllSize = 9;
+  
+  @Option(name = "-hllColumns", required = false, metaVar = "<string>", usage = "Columns to compute HLL")
+  private String _hllColumns;
+  
+  @Option(name = "-hllSuffix", required = false, metaVar = "<string>", usage = "suffix for the derived HLL column")
+  private String _hllSuffix = HllConstants.DEFAULT_HLL_DERIVE_COLUMN_SUFFIX;
+  
   @Option(name = "-numThreads", required = false, metaVar = "<int>",
       usage = "Parallelism while generating segments, default is 1.")
   private int _numThreads = 1;
@@ -141,6 +154,24 @@ public class CreateSegmentCommand extends AbstractBaseAdminCommand implements Co
     _numThreads = numThreads;
     return this;
   }
+  
+  public CreateSegmentCommand setHllSize(int hllSize) {
+    _hllSize = hllSize;
+    return this;
+
+  }
+
+  public CreateSegmentCommand setHllColumns(String hllColumns) {
+    _hllColumns = hllColumns;
+    return this;
+
+  }
+
+  public CreateSegmentCommand setHllSuffix(String hllSuffix) {
+    _hllSuffix = hllSuffix;
+    return this;
+
+  }
 
   @Override
   public String toString() {
@@ -148,6 +179,7 @@ public class CreateSegmentCommand extends AbstractBaseAdminCommand implements Co
         + _format + " -outDir " + _outDir + " -overwrite " + _overwrite + " -tableName " + _tableName + " -segmentName "
         + _segmentName + " -schemaFile " + _schemaFile + " -readerConfigFile " + _readerConfigFile
         + " -enableStarTreeIndex " + _enableStarTreeIndex + " -starTreeIndexSpecFile " + _starTreeIndexSpecFile
+        + " -hllSize " + _hllSize + " -hllColumns " + _hllColumns + " -hllSuffix " + _hllSuffix
         + " -numThreads " + _numThreads);
   }
 
@@ -252,11 +284,15 @@ public class CreateSegmentCommand extends AbstractBaseAdminCommand implements Co
     if (!dir.exists() || !dir.isDirectory()) {
       throw new RuntimeException("Data directory " + _dataDir + " not found.");
     }
-
+    final String formatString = _format.toString().toLowerCase();
+    System.out.println("formatString:" + formatString);
     File[] files = dir.listFiles(new FilenameFilter() {
       @Override
       public boolean accept(File dir, String name) {
-        return name.toLowerCase().endsWith(_format.toString().toLowerCase());
+        String lowerCaseName = name.toLowerCase();
+        boolean accepted = lowerCaseName.endsWith(formatString) || lowerCaseName.endsWith(formatString + ".gz");
+        System.out.println(name + " accept:"+ accepted );
+        return accepted;
       }
     });
 
@@ -310,7 +346,21 @@ public class CreateSegmentCommand extends AbstractBaseAdminCommand implements Co
       }
       segmentGeneratorConfig.setStarTreeIndexSpecFile(_starTreeIndexSpecFile);
     }
-
+    //HLL CONFIG
+    if (_hllColumns != null) {
+      String[] split = _hllColumns.trim().split(",");
+      Set<String> hllColumnSet = new LinkedHashSet<>();
+      for (String column : split) {
+        hllColumnSet.add(column.trim());
+      }
+      if (!hllColumnSet.isEmpty()) {
+        HllConfig hllConfig = new HllConfig(HllConstants.DEFAULT_LOG2M);
+        hllConfig.setColumnsToDeriveHllFields(hllColumnSet);
+        hllConfig.setHllDeriveColumnSuffix(_hllSuffix);
+        segmentGeneratorConfig.setHllConfig(hllConfig);
+      }
+    }
+    
     ExecutorService executor = Executors.newFixedThreadPool(_numThreads);
     int cnt = 0;
     for (final File file : files) {

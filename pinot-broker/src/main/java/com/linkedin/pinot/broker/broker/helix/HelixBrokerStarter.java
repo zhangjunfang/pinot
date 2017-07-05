@@ -95,7 +95,7 @@ public class HelixBrokerStarter {
                         + _pinotHelixProperties.getInt(CommonConstants.Helix.KEY_OF_BROKER_QUERY_PORT,
                     CommonConstants.Helix.DEFAULT_BROKER_QUERY_PORT));
 
-    _pinotHelixProperties.addProperty(BrokerRequestHandler.BROKER_ID_CONFIG_KEY, brokerId);
+    _pinotHelixProperties.addProperty(CommonConstants.Broker.BROKER_ID_CONFIG_KEY, brokerId);
     setupHelixSystemProperties();
 
     // Remove all white-spaces from the list of zkServers (if any).

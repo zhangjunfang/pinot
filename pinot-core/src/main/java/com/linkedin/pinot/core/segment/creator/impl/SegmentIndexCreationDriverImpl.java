@@ -188,8 +188,8 @@ public class SegmentIndexCreationDriverImpl implements SegmentIndexCreationDrive
       for (Entry<String, String> entry : hllConfig.getDerivedHllFieldToOriginMap().entrySet()) {
         String derivedFieldName = entry.getKey();
         String originFieldName = entry.getValue();
-        row.putField(derivedFieldName,
-            HllUtil.singleValueHllAsString(hllConfig.getHllLog2m(), row.getValue(originFieldName)));
+        String hllValue = HllUtil.singleValueHllAsString(hllConfig.getHllLog2m(), row.getValue(originFieldName));
+        row.putField(derivedFieldName, hllValue);
       }
     }
   }
@@ -239,7 +239,7 @@ public class SegmentIndexCreationDriverImpl implements SegmentIndexCreationDrive
     starTreeBuilderConfig.setOutDir(starTreeTempDir);
 
     boolean enableOffHeapFormat = starTreeIndexSpec.isEnableOffHeapFormat();
-    starTreeBuilderConfig.setEnableOffHealpFormat(enableOffHeapFormat);
+    starTreeBuilderConfig.setEnableOffHeapFormat(enableOffHeapFormat);
 
     //initialize star tree builder
     StarTreeBuilder starTreeBuilder = new OffHeapStarTreeBuilder();
