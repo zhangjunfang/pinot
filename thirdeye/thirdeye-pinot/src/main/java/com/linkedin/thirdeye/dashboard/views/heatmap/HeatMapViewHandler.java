@@ -15,12 +15,15 @@ import java.util.concurrent.Future;
 import org.apache.commons.lang3.StringUtils;
 import org.joda.time.DateTime;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
+import com.linkedin.thirdeye.api.TimeSpec;
 import com.linkedin.thirdeye.dashboard.Utils;
 import com.linkedin.thirdeye.dashboard.views.GenericResponse;
 import com.linkedin.thirdeye.dashboard.views.GenericResponse.Info;
 import com.linkedin.thirdeye.dashboard.views.GenericResponse.ResponseSchema;
 import com.linkedin.thirdeye.dashboard.views.ViewHandler;
+import com.linkedin.thirdeye.datalayer.dto.DatasetConfigDTO;
 import com.linkedin.thirdeye.datalayer.dto.MetricConfigDTO;
 import com.linkedin.thirdeye.datasource.MetricExpression;
 import com.linkedin.thirdeye.datasource.MetricFunction;
@@ -32,8 +35,8 @@ import com.linkedin.thirdeye.datasource.comparison.TimeOnTimeComparisonHandler;
 import com.linkedin.thirdeye.datasource.comparison.TimeOnTimeComparisonRequest;
 import com.linkedin.thirdeye.datasource.comparison.TimeOnTimeComparisonResponse;
 import com.linkedin.thirdeye.datasource.comparison.Row.Metric;
+import com.linkedin.thirdeye.util.ThirdEyeUtils;
 
-import jersey.repackaged.com.google.common.collect.Lists;
 
 public class HeatMapViewHandler implements ViewHandler<HeatMapViewRequest, HeatMapViewResponse> {
 
@@ -50,18 +53,18 @@ public class HeatMapViewHandler implements ViewHandler<HeatMapViewRequest, HeatM
       throws Exception {
 
     TimeOnTimeComparisonRequest comparisonRequest = new TimeOnTimeComparisonRequest();
-    String collection = request.getCollection();
+    String dataset = request.getCollection();
     DateTime baselineStart = request.getBaselineStart();
     DateTime baselineEnd = request.getBaselineEnd();
     DateTime currentStart = request.getCurrentStart();
     DateTime currentEnd = request.getCurrentEnd();
-    comparisonRequest.setEndDateInclusive(false);
+    comparisonRequest.setEndDateInclusive(true);
 
     Multimap<String, String> filters = request.getFilters();
-    List<String> dimensionsToGroupBy = Utils.getDimensionsToGroupBy(collection, filters);
+    List<String> dimensionsToGroupBy = Utils.getDimensionsToGroupBy(dataset, filters);
 
     List<MetricExpression> metricExpressions = request.getMetricExpressions();
-    comparisonRequest.setCollectionName(collection);
+    comparisonRequest.setCollectionName(dataset);
     comparisonRequest.setBaselineStart(baselineStart);
     comparisonRequest.setBaselineEnd(baselineEnd);
     comparisonRequest.setCurrentStart(currentStart);
@@ -69,7 +72,9 @@ public class HeatMapViewHandler implements ViewHandler<HeatMapViewRequest, HeatM
     comparisonRequest.setGroupByDimensions(dimensionsToGroupBy);
     comparisonRequest.setFilterSet(filters);
     comparisonRequest.setMetricExpressions(metricExpressions);
-    comparisonRequest.setAggregationTimeGranularity(null);
+    DatasetConfigDTO datasetConfig = ThirdEyeUtils.getDatasetConfigFromName(dataset);
+    TimeSpec timeSpec = ThirdEyeUtils.getTimeSpecFromDatasetConfig(datasetConfig);
+    comparisonRequest.setAggregationTimeGranularity(timeSpec.getDataGranularity());
     return comparisonRequest;
   }
 
