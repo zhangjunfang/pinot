@@ -973,7 +973,7 @@ public class AnomaliesResource {
    *
    * @return the filter set for querying the time series that produce the anomaly.
    */
-  public static Multimap<String, String> generateFilterSetForTimeSeriesQuery(MergedAnomalyResultDTO mergedAnomaly) {
+  private static Multimap<String, String> generateFilterSetForTimeSeriesQuery(MergedAnomalyResultDTO mergedAnomaly) {
     AnomalyFunctionDTO anomalyFunctionDTO = mergedAnomaly.getFunction();
     Multimap<String, String> filterSet = anomalyFunctionDTO.getFilterSet();
     Multimap<String, String> newFilterSet = generateFilterSetWithDimensionMap(mergedAnomaly.getDimensions(), filterSet);

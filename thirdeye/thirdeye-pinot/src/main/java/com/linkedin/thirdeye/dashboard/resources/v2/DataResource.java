@@ -786,13 +786,13 @@ public class DataResource {
    * @return {@code true} if anomaly passed the filters, {@code false} otherwise
    */
   static boolean applyAnomalyFilters(MergedAnomalyResultDTO anomaly, Multimap<String, String> filters) {
-    Multimap<String, String> anomalyFilter = AnomaliesResource.generateFilterSetForTimeSeriesQuery(anomaly);
+    DimensionMap dim = anomaly.getDimensions();
     for (String filterKey : filters.keySet()) {
-      if (!anomalyFilter.containsKey(filterKey))
+      if (!dim.containsKey(filterKey))
         return false;
 
       Collection<String> filterValues = filters.get(filterKey);
-      if (!filterValues.containsAll(anomalyFilter.get(filterKey)))
+      if (!filterValues.contains(dim.get(filterKey)))
         return false;
     }
     return true;
