@@ -194,6 +194,7 @@ public class CommonConstants {
   }
 
   public static class Server {
+    public static final String CONFIG_OF_CONSUMER_CLASS = "pinot.server.consumer.class";
     public static final String CONFIG_OF_INSTANCE_DATA_DIR = "pinot.server.instance.dataDir";
     public static final String CONFIG_OF_INSTANCE_SEGMENT_TAR_DIR = "pinot.server.instance.segmentTarDir";
     public static final String CONFIG_OF_INSTANCE_READ_MODE = "pinot.server.instance.readMode";
@@ -221,6 +222,7 @@ public class CommonConstants {
     public static final String DEFAULT_INSTANCE_DATA_DIR = DEFAULT_INSTANCE_BASE_DIR + File.separator + "index";
     public static final String DEFAULT_INSTANCE_SEGMENT_TAR_DIR =
         DEFAULT_INSTANCE_BASE_DIR + File.separator + "segmentTar";
+    public static final String DEFAULT_CONSUMER_CLASS = "LiKafkaConsumer";
     public static final String DEFAULT_SEGMENT_METADATA_LOADER_CLASS =
         "com.linkedin.pinot.core.indexsegment.columnar.ColumnarSegmentMetadataLoader";
     public static final String DEFAULT_DATA_MANAGER_CLASS =

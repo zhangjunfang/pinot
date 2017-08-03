@@ -41,6 +41,7 @@ public class DefaultHelixStarterServerConfig {
 
   public static Configuration loadDefaultServerConf() {
     Configuration serverConf = new PropertiesConfiguration();
+    serverConf.addProperty(CommonConstants.Server.CONFIG_OF_CONSUMER_CLASS, CommonConstants.Server.DEFAULT_CONSUMER_CLASS);
     serverConf.addProperty(CommonConstants.Server.CONFIG_OF_INSTANCE_DATA_DIR,
         CommonConstants.Server.DEFAULT_INSTANCE_DATA_DIR);
     serverConf.addProperty(CommonConstants.Server.CONFIG_OF_INSTANCE_SEGMENT_TAR_DIR,
