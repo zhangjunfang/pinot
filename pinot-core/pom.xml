@@ -136,6 +136,12 @@
       <artifactId>kafka_2.10</artifactId>
     </dependency>
 
+    <!-- https://mvnrepository.com/artifact/org.apache.kafka/kafka-clients -->
+    <dependency>
+      <groupId>org.apache.kafka</groupId>
+      <artifactId>kafka-clients</artifactId>
+    </dependency>
+
     <!-- test -->
     <dependency>
       <groupId>org.mockito</groupId>

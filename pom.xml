@@ -488,6 +488,13 @@
         <version>${kafka.version}</version>
       </dependency>
 
+      <!-- https://mvnrepository.com/artifact/org.apache.kafka/kafka-clients -->
+      <dependency>
+        <groupId>org.apache.kafka</groupId>
+        <artifactId>kafka-clients</artifactId>
+        <version>0.8.2.1</version>
+      </dependency>
+
       <!-- Hadoop  -->
       <dependency>
         <groupId>org.apache.hadoop</groupId>
