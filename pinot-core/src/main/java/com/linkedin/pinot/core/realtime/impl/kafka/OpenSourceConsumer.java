@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-package com.linkedin.pinot.server.starter.helix;
+package com.linkedin.pinot.core.realtime.impl.kafka;
+
+import com.linkedin.pinot.core.data.GenericRow;
+import com.linkedin.pinot.core.query.utils.Pair;
+import java.util.ArrayList;
+import java.util.List;
+
 
 public class OpenSourceConsumer implements IConsumer {
   private final String _foo;
@@ -23,18 +29,15 @@ public class OpenSourceConsumer implements IConsumer {
     _foo = foo;
   _bar = bar;
   }
-  @Override
   public void start() {
-    System.out.printf(this.getClass().getName() + " started");
+    // Subscribe
   }
 
-  @Override
-  public void m1(String x) {
-    System.out.println(this.getClass().getName() + "method 1 Called with foo=" + x);
+  public void stop() {
+    // Unsubscribe
   }
 
-  @Override
-  public void method2(long y) {
-    System.out.println(this.getClass().getName() + "methid 2 called with bar = " + y);
+  public List<Pair<GenericRow, Long>> poll(long startOffset, long timeoutMillis, long maxNumberMessages, KafkaAvroMessageDecoder deserializer) throws InterruptedException {
+    return new ArrayList<>();
   }
 }

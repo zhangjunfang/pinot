@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-package com.linkedin.pinot.server.starter.helix;
+package com.linkedin.pinot.core.realtime.impl.kafka;
 
 public interface IFactory {
-  public IConsumer  make(String foo, long bar);
+  public IConsumer make(String foo, long bar);
 }

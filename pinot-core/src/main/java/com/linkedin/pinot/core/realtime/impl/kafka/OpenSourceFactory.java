@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-package com.linkedin.pinot.server.starter.helix;
+package com.linkedin.pinot.core.realtime.impl.kafka;
 
-public interface IConsumer {
-  public void start();
-
-  public void m1(String foo);
-
-  public void method2(long bar);
+public class OpenSourceFactory implements IFactory {
+  @Override
+  public IConsumer make(String foo, long bar) {
+    return new OpenSourceConsumer(foo, bar);
+  }
 }
