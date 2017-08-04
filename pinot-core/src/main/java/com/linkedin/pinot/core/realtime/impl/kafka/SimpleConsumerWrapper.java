@@ -472,32 +472,13 @@ public class SimpleConsumerWrapper implements Closeable {
       case OFFSET_METADATA_TOO_LARGE:
       case INVALID_TOPIC_EXCEPTION:
       case RECORD_LIST_TOO_LARGE:
-      case INVALID_REQUIRED_ACKS:
-      case ILLEGAL_GENERATION:
-      case INCONSISTENT_GROUP_PROTOCOL:
-      case INVALID_GROUP_ID:
-      case UNKNOWN_MEMBER_ID:
-      case INVALID_SESSION_TIMEOUT:
-      case INVALID_COMMIT_OFFSET_SIZE:
-        return new PermanentConsumerException(kafkaError);
       case UNKNOWN_TOPIC_OR_PARTITION:
       case LEADER_NOT_AVAILABLE:
       case NOT_LEADER_FOR_PARTITION:
       case REQUEST_TIMED_OUT:
-      case BROKER_NOT_AVAILABLE:
-      case REPLICA_NOT_AVAILABLE:
-      case STALE_CONTROLLER_EPOCH:
       case NETWORK_EXCEPTION:
-      case GROUP_LOAD_IN_PROGRESS:
-      case GROUP_COORDINATOR_NOT_AVAILABLE:
-      case NOT_COORDINATOR_FOR_GROUP:
       case NOT_ENOUGH_REPLICAS:
       case NOT_ENOUGH_REPLICAS_AFTER_APPEND:
-      case REBALANCE_IN_PROGRESS:
-      case TOPIC_AUTHORIZATION_FAILED:
-      case GROUP_AUTHORIZATION_FAILED:
-      case CLUSTER_AUTHORIZATION_FAILED:
-        return new TransientConsumerException(kafkaError);
       case NONE:
       default:
         return new RuntimeException("Unhandled error " + kafkaError);
