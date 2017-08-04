@@ -16,23 +16,23 @@
 package com.linkedin.pinot.core.data;
 
 import com.linkedin.pinot.common.data.RowEvent;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.type.TypeReference;
-
 import java.io.IOException;
+import java.io.Serializable;
 import java.io.StringWriter;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.type.TypeReference;
 
 
 /**
  * A plain implementation of RowEvent based on HashMap. Should be reused as much as possible via
  * {@link GenericRow#createOrReuseRow(GenericRow)}
  */
-public class GenericRow implements RowEvent {
+public class GenericRow implements RowEvent, Serializable {
   private Map<String, Object> _fieldMap = new HashMap<String, Object>();
   private static ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
