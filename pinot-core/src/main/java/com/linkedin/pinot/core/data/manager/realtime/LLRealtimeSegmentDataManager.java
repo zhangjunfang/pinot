@@ -16,20 +16,6 @@
 
 package com.linkedin.pinot.core.data.manager.realtime;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicLong;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.tuple.Pair;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.linkedin.pinot.common.config.IndexingConfig;
@@ -55,8 +41,11 @@ import com.linkedin.pinot.core.data.extractors.PlainFieldExtractor;
 import com.linkedin.pinot.core.data.manager.offline.SegmentDataManager;
 import com.linkedin.pinot.core.indexsegment.IndexSegment;
 import com.linkedin.pinot.core.indexsegment.generator.SegmentVersion;
+import com.linkedin.pinot.core.query.utils.Pair;
 import com.linkedin.pinot.core.realtime.converter.RealtimeSegmentConverter;
 import com.linkedin.pinot.core.realtime.impl.RealtimeSegmentImpl;
+import com.linkedin.pinot.core.realtime.impl.kafka.IConsumer;
+import com.linkedin.pinot.core.realtime.impl.kafka.IFactory;
 import com.linkedin.pinot.core.realtime.impl.kafka.KafkaLowLevelStreamProviderConfig;
 import com.linkedin.pinot.core.realtime.impl.kafka.KafkaMessageDecoder;
 import com.linkedin.pinot.core.realtime.impl.kafka.KafkaSimpleConsumerFactoryImpl;
@@ -64,7 +53,19 @@ import com.linkedin.pinot.core.realtime.impl.kafka.SimpleConsumerWrapper;
 import com.linkedin.pinot.core.segment.index.loader.IndexLoadingConfig;
 import com.linkedin.pinot.server.realtime.ServerSegmentCompletionProtocolHandler;
 import com.yammer.metrics.core.Meter;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import kafka.message.MessageAndOffset;
+import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -189,6 +190,8 @@ public class LLRealtimeSegmentDataManager extends SegmentDataManager {
   private final LLCSegmentName _segmentName;
   private final PlainFieldExtractor _fieldExtractor;
   private SimpleConsumerWrapper _consumerWrapper = null;
+  private IFactory _ifactory = null;
+  private IConsumer _iConsumer = null;
   private final File _resourceTmpDir;
   private final String _tableName;
   private final List<String> _invertedIndexColumns;
@@ -273,18 +276,6 @@ public class LLRealtimeSegmentDataManager extends SegmentDataManager {
     }
   }
 
-  private void handleTransientKafkaErrors(Exception e) throws  Exception {
-    consecutiveErrorCount++;
-    if (consecutiveErrorCount > MAX_CONSECUTIVE_ERROR_COUNT) {
-      segmentLogger.warn("Kafka transient exception when fetching messages, stopping consumption after {} attempts", consecutiveErrorCount, e);
-      throw e;
-    } else {
-      segmentLogger.warn("Kafka transient exception when fetching messages, retrying (count={})", consecutiveErrorCount, e);
-      Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
-      makeConsumerWrapper("Too many transient errors");
-    }
-  }
-
   protected boolean consumeLoop() throws Exception {
     _fieldExtractor.resetCounters();
     final long idlePipeSleepTimeMillis = 100;
@@ -300,32 +291,10 @@ public class LLRealtimeSegmentDataManager extends SegmentDataManager {
     while(!_shouldStop && !endCriteriaReached()) {
       // Consume for the next _kafkaReadTime ms, or we get to final offset, whichever happens earlier,
       // Update _currentOffset upon return from this method
-      Iterable<MessageAndOffset> messagesAndOffsets = null;
-      Long highWatermark = null;
-      try {
-        Pair<Iterable<MessageAndOffset>, Long> messagesAndWatermark =
-            _consumerWrapper.fetchMessagesAndHighWatermark(_currentOffset, _endOffset,
-                _kafkaStreamMetadata.getKafkaFetchTimeoutMillis());
-        consecutiveErrorCount = 0;
-        messagesAndOffsets = messagesAndWatermark.getLeft();
-        highWatermark = messagesAndWatermark.getRight();
-      } catch (TimeoutException e) {
-        handleTransientKafkaErrors(e);
-        continue;
-      } catch (SimpleConsumerWrapper.TransientConsumerException e) {
-        handleTransientKafkaErrors(e);
-        continue;
-      } catch (SimpleConsumerWrapper.PermanentConsumerException e) {
-        segmentLogger.warn("Kafka permanent exception when fetching messages, stopping consumption", e);
-        throw e;
-      } catch (Exception e) {
-        // Unknown exception from Kafka. Treat as a transient exception.
-        // One such exception seen so far is java.net.SocketTimeoutException
-        handleTransientKafkaErrors(e);
-        continue;
-      }
+      List<Pair<GenericRow, Long>> messagesAndOffsets =
+          _iConsumer.poll(_currentOffset, _endOffset, _kafkaStreamMetadata.getKafkaFetchTimeoutMillis());
 
-      processKafkaEvents(messagesAndOffsets, highWatermark, idlePipeSleepTimeMillis);
+      processKafkaEvents(messagesAndOffsets, _endOffset, idlePipeSleepTimeMillis);
 
       if (_currentOffset != lastUpdatedOffset) {
         // We consumed something. Update the highest kafka offset as well as partition-consuming metric.
@@ -338,6 +307,9 @@ public class LLRealtimeSegmentDataManager extends SegmentDataManager {
         if (++idleCount > maxIdleCountBeforeStatUpdate) {
           _serverMetrics.setValueOfTableGauge(_metricKeyName, ServerGauge.LLC_PARTITION_CONSUMING, 1);
           idleCount = 0;
+          _iConsumer.start(_ifactory,
+              _kafkaBootstrapNodes, _clientId, _kafkaTopic, _kafkaPartitionId,
+              _kafkaStreamMetadata.getKafkaConnectionTimeoutMillis());
           makeConsumerWrapper("Idle for too long");
         }
       }
@@ -352,6 +324,10 @@ public class LLRealtimeSegmentDataManager extends SegmentDataManager {
     _serverMetrics.addMeteredTableValue(_metricKeyName, ServerMeter.COLUMNS_WITH_NULL_VALUES,
         (long) _fieldExtractor.getTotalNullCols());
     return true;
+  }
+
+  private void processKafkaEvents(List<Pair<GenericRow, Long>> messagesAndOffsets, Long endOffset, long idlePipeSleepTimeMillis) {
+
   }
 
   private void processKafkaEvents(Iterable<MessageAndOffset> messagesAndOffsets, Long highWatermark, long idlePipeSleepTimeMillis) {
@@ -945,7 +921,7 @@ public class LLRealtimeSegmentDataManager extends SegmentDataManager {
 
     // Create field extractor
     _fieldExtractor = FieldExtractorFactory.getPlainFieldExtractor(schema);
-    makeConsumerWrapper("Starting");
+    _iConsumer.start(_ifactory, _kafkaBootstrapNodes, _clientId, _kafkaTopic, _kafkaPartitionId, _maxTimeForConsumingToOnlineSec);
 
     SegmentPartitionConfig segmentPartitionConfig = indexingConfig.getSegmentPartitionConfig();
     if (segmentPartitionConfig != null) {
@@ -956,7 +932,7 @@ public class LLRealtimeSegmentDataManager extends SegmentDataManager {
       } catch (Exception e) {
         segmentLogger.warn("Couldn't get number of partitions in 5s, not using partition config {}", e.getMessage());
         _realtimeSegment.setSegmentPartitionConfig(null);
-        makeConsumerWrapper("Timeout getting number of partitions");
+        _iConsumer.start(_ifactory, _kafkaBootstrapNodes, _clientId, _kafkaTopic, _kafkaPartitionId, _maxTimeForConsumingToOnlineSec);
       }
     }
 

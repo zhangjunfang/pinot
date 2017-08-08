@@ -18,7 +18,7 @@ package com.linkedin.pinot.core.realtime.impl.kafka;
 
 public class OpenSourceFactory implements IFactory {
   @Override
-  public IConsumer make(String foo, long bar) {
-    return new OpenSourceConsumer(foo, bar);
+  public IConsumer buildConsumer(String host, int port, int soTimeout, int bufferSize, String clientId) {
+    return new OpenSourceConsumer(host, port, soTimeout, bufferSize, clientId);
   }
 }

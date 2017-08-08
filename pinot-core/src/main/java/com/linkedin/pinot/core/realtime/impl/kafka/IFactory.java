@@ -17,5 +17,5 @@
 package com.linkedin.pinot.core.realtime.impl.kafka;
 
 public interface IFactory {
-  public IConsumer make(String foo, long bar);
+  public IConsumer buildConsumer(String host, int port, int soTimeout, int bufferSize, String clientId);
 }

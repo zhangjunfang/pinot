@@ -27,14 +27,15 @@ public interface IConsumer {
    * Tells the Consumer to connect to the underlying system, and prepare
    * to begin serving messages when poll is invoked.
    */
-  void start();
+  void start(IFactory simpleConsumerFactory,
+      String bootstrapNodes, String clientId, String topic, int partition, long connectTimeoutMillis);
 
   /**
    * Tells the Consumer to close all connections, release all resource,
    * and shut down everything. The SystemConsumer will not be used again after
    * stop is called.
    */
-  void stop();
+  void close();
 
   /**
    * Poll the SystemConsumer to get any available messages from the underlying
@@ -47,5 +48,5 @@ public interface IConsumer {
    *          Thrown when a blocking poll has been interrupted by another
    *          thread.
    */
-  List<Pair<GenericRow, Long>> poll(long startOffset, long timeoutMillis, long maxNumberMessages, KafkaAvroMessageDecoder deserializer) throws InterruptedException;
+  List<Pair<GenericRow, Long>> poll(long startOffset, long endOffset, long timeoutMillis, KafkaIndexedRecordToGenericRecordDecoder deserializer) throws InterruptedException;
 }
