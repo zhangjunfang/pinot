@@ -292,7 +292,7 @@ public class LLRealtimeSegmentDataManager extends SegmentDataManager {
       // Consume for the next _kafkaReadTime ms, or we get to final offset, whichever happens earlier,
       // Update _currentOffset upon return from this method
       List<Pair<GenericRow, Long>> messagesAndOffsets =
-          _iConsumer.poll(_currentOffset, _endOffset, _kafkaStreamMetadata.getKafkaFetchTimeoutMillis());
+          _iConsumer.poll(_currentOffset, _endOffset, _kafkaStreamMetadata.getKafkaFetchTimeoutMillis(), _messageDecoder);
 
       processKafkaEvents(messagesAndOffsets, _endOffset, idlePipeSleepTimeMillis);
 

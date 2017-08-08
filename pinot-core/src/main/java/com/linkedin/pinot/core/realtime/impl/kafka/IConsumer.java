@@ -48,5 +48,5 @@ public interface IConsumer {
    *          Thrown when a blocking poll has been interrupted by another
    *          thread.
    */
-  List<Pair<GenericRow, Long>> poll(long startOffset, long endOffset, long timeoutMillis, KafkaIndexedRecordToGenericRecordDecoder deserializer) throws InterruptedException;
+  List<Pair<GenericRow, Long>> poll(long startOffset, long endOffset, long timeoutMillis, KafkaMessageDecoder deserializer) throws InterruptedException;
 }

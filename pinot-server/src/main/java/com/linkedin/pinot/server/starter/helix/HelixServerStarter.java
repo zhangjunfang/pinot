@@ -28,8 +28,6 @@ import com.linkedin.pinot.common.utils.NetUtil;
 import com.linkedin.pinot.common.utils.ServiceStatus;
 import com.linkedin.pinot.common.utils.ZkUtils;
 import com.linkedin.pinot.core.indexsegment.columnar.ColumnarSegmentMetadataLoader;
-import com.linkedin.pinot.core.realtime.impl.kafka.IConsumer;
-import com.linkedin.pinot.core.realtime.impl.kafka.IFactory;
 import com.linkedin.pinot.server.conf.ServerConf;
 import com.linkedin.pinot.server.realtime.ControllerLeaderLocator;
 import com.linkedin.pinot.server.starter.ServerInstance;
@@ -97,7 +95,6 @@ public class HelixServerStarter {
           + CommonConstants.Server.DEFAULT_QUERY_EXECUTOR_TIMEOUT, e);
       maxQueryTimeLong = Long.parseLong(CommonConstants.Server.DEFAULT_QUERY_EXECUTOR_TIMEOUT);
     }
-    doSomething();
 
     MAX_QUERY_TIME_MILLIS = maxQueryTimeLong;
 
@@ -206,14 +203,6 @@ public class HelixServerStarter {
                 return (long) MmapUtils.getAllocationFailureCount();
               }
             });
-  }
-
-  private void doSomething() throws ClassNotFoundException, InstantiationException, IllegalAccessException {
-    String factoryName = "com.linkedin.pinot.core.realtime.impl.kafka.OpenSourceFactory";
-
-    IFactory factory = (IFactory) Class.forName(factoryName).newInstance();
-    IConsumer consumer = factory.make("jdai", 29);
-    consumer.start();
   }
 
   private void updateInstanceConfigInHelix(int adminApiPort, boolean shuttingDown) {
