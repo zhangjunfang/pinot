@@ -84,14 +84,16 @@ public class PinotSchemaRestletResource {
   @Path("/schemas/{schemaName}")
   @ApiOperation(value = "Get a schema", notes = "Gets a schema by name")
   @ApiResponses(value = {@ApiResponse(code = 200, message = "Success"), @ApiResponse(code = 404, message = "Schema not found"), @ApiResponse(code = 500, message = "Internal error")})
-  public Schema getSchema(
+  public String getSchema(
       @ApiParam(value = "Schema name", required = true) @PathParam("schemaName") String schemaName) {
     LOGGER.info("looking for schema {}", schemaName);
     Schema schema = _pinotHelixResourceManager.getSchema(schemaName);
     if (schema == null) {
       throw new WebApplicationException("Schema not found", Response.Status.NOT_FOUND);
     }
-    return schema;
+    // We need to return schema.getJSONSchema(). Returning schema ends up with many extra fields, "jsonSchema" being one of them,
+    // Others like fieldSpecMap, etc., serialzing the entire Schema object.
+    return schema.getJSONSchema();
   }
 
   @DELETE
