@@ -5,7 +5,14 @@ import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.lang.builder.ToStringStyle;
 
 public class NodeIdentifier {
-  private String name;
+  private String name = "";
+
+  public NodeIdentifier() {
+  }
+
+  public NodeIdentifier(String name) {
+    this.name = name;
+  }
 
   public String getName() {
     return name;

@@ -1,20 +1,19 @@
 package com.linkedin.thirdeye.taskexecution.operator;
 
-import com.linkedin.thirdeye.taskexecution.dag.Node;
 import com.linkedin.thirdeye.taskexecution.dag.NodeIdentifier;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class OperatorContext {
-  private Node node;
+  private NodeIdentifier nodeIdentifier;
   private Map<NodeIdentifier, OperatorResult> inputs = new LinkedHashMap<>();
 
-  public Node getNode() {
-    return node;
+  public NodeIdentifier getNodeIdentifier() {
+    return nodeIdentifier;
   }
 
-  public void setNode(Node node) {
-    this.node = node;
+  public void setNodeIdentifier(NodeIdentifier nodeIdentifier) {
+    this.nodeIdentifier = nodeIdentifier;
   }
 
   public Map<NodeIdentifier, OperatorResult> getInputs() {

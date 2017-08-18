@@ -15,9 +15,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * An executor that goes through the DAG and submit the nodes, whose parents are finished, to execution service.
- * An executor takes care of only logical execution (control flow). The physical execution is done by OperatorRunner,
- * which could be executed on other machines.
+ * An single machine executor that goes through the DAG and submit the nodes, whose parents are finished, to execution
+ * service. An executor takes care of only logical execution (control flow). The physical execution is done by
+ * OperatorRunner, which could be executed on other machines.
  */
 public class DAGExecutor<T extends Node<T>> {
   private static final Logger LOG = LoggerFactory.getLogger(DAGExecutor.class);
@@ -45,7 +45,7 @@ public class DAGExecutor<T extends Node<T>> {
         assert (!ExecutionStatus.RUNNING.equals(executionStatus));
         LOG.info("Execution status of node {}: {}.", nodeIdentifier.toString(), executionStatus);
         // Check whether the execution should be stopped upon execution failure
-        if (ExecutionStatus.FAILED.equals(executionStatus)) {
+        if (ExecutionStatus.FAILED.equals(executionStatus) && dagConfig.stopAtFailure()) {
           LOG.error("Aborting execution because execution of node {} is failed.", nodeIdentifier.toString());
           abortExecution();
           break;
@@ -60,6 +60,7 @@ public class DAGExecutor<T extends Node<T>> {
         // The implementation of OperatorRunner needs to guarantee that this block never happens
         LOG.error("Aborting execution because unexpected error.", e);
         abortExecution();
+        break;
       }
     }
   }

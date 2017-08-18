@@ -49,13 +49,6 @@ public class LogicalPlan implements FrameworkDAG<LogicalNode> {
     }
   }
 
-  /**
-   * Returns the node with the given {@link NodeIdentifier}.
-   *
-   * @param nodeIdentifier the node identifier.
-   *
-   * @return the node with the given {@link NodeIdentifier}.
-   */
   @Override
   public LogicalNode getNode(NodeIdentifier nodeIdentifier) {
     return nodes.get(nodeIdentifier);
@@ -81,11 +74,6 @@ public class LogicalPlan implements FrameworkDAG<LogicalNode> {
     }
   }
 
-  /**
-   * Returns the number of nodes in the DAG.
-   *
-   * @return the number of nodes in the DAG.
-   */
   @Override
   public int size() {
     return nodes.size();
