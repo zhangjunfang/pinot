@@ -22,8 +22,8 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 
 
-public class FrameworkDAGExecutorTest {
-  private static final Logger LOG = LoggerFactory.getLogger(FrameworkDAGExecutorTest.class);
+public class DAGExecutorTest {
+  private static final Logger LOG = LoggerFactory.getLogger(DAGExecutorTest.class);
   private ExecutorService pool = Executors.newFixedThreadPool(10);
 
   /**
@@ -35,7 +35,7 @@ public class FrameworkDAGExecutorTest {
     Node root = new LogicalNode("root", ExecutionLogOperator.class);
     dag.addNode(root);
 
-    FrameworkDAGExecutor<LogicalNode> dagExecutor = new FrameworkDAGExecutor<>(pool);
+    DAGExecutor<LogicalNode> dagExecutor = new DAGExecutor<>(pool);
     dagExecutor.execute(dag, new DAGConfig());
 
     // Check not null
@@ -64,7 +64,7 @@ public class FrameworkDAGExecutorTest {
     dag.addEdge(node1, node2);
     dag.addEdge(node2, node3);
 
-    FrameworkDAGExecutor dagExecutor = new FrameworkDAGExecutor(pool);
+    DAGExecutor dagExecutor = new DAGExecutor(pool);
     dagExecutor.execute(dag, new DAGConfig());
 
     // Check not null
@@ -113,7 +113,7 @@ public class FrameworkDAGExecutorTest {
     dag.addEdge(node22, node24);
     dag.addEdge(node24, leaf2);
 
-    FrameworkDAGExecutor dagExecutor = new FrameworkDAGExecutor(pool);
+    DAGExecutor dagExecutor = new DAGExecutor(pool);
     dagExecutor.execute(dag, new DAGConfig());
 
     // Check path 1
@@ -198,7 +198,7 @@ public class FrameworkDAGExecutorTest {
     dag.addEdge(root, node12);
     dag.addEdge(node12, leaf);
 
-    FrameworkDAGExecutor dagExecutor = new FrameworkDAGExecutor(pool);
+    DAGExecutor dagExecutor = new DAGExecutor(pool);
     dagExecutor.execute(dag, new DAGConfig());
 
     // Check not null

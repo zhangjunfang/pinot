@@ -1,7 +1,6 @@
 package com.linkedin.thirdeye.taskexecution.impl.dag;
 
 import com.linkedin.thirdeye.taskexecution.dag.DAG;
-import com.linkedin.thirdeye.taskexecution.dag.FrameworkNode;
 import com.linkedin.thirdeye.taskexecution.dag.Node;
 import com.linkedin.thirdeye.taskexecution.dag.NodeIdentifier;
 import java.util.Collection;
@@ -20,8 +19,8 @@ import org.slf4j.LoggerFactory;
  * An executor takes care of only logical execution (control flow). The physical execution is done by OperatorRunner,
  * which could be executed on other machines.
  */
-public class FrameworkDAGExecutor<T extends FrameworkNode<T>> {
-  private static final Logger LOG = LoggerFactory.getLogger(FrameworkDAGExecutor.class);
+public class DAGExecutor<T extends Node<T>> {
+  private static final Logger LOG = LoggerFactory.getLogger(DAGExecutor.class);
   private ExecutorCompletionService<NodeIdentifier> executorCompletionService;
 
   // TODO: Persistent the following status to a DB in case of executor unexpectedly dies
@@ -29,7 +28,7 @@ public class FrameworkDAGExecutor<T extends FrameworkNode<T>> {
   private Map<NodeIdentifier, T> runningNodes = new HashMap<>();
 
 
-  public FrameworkDAGExecutor(ExecutorService executorService) {
+  public DAGExecutor(ExecutorService executorService) {
     this.executorCompletionService = new ExecutorCompletionService<>(executorService);
   }
 
