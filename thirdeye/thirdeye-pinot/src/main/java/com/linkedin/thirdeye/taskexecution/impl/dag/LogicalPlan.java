@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
-public class LogicalPlan implements FrameworkDAG<LogicalNode> {
+public class LogicalPlan extends FrameworkDAG<LogicalNode> {
   private Map<NodeIdentifier, LogicalNode> rootNodes = new HashMap<>();
   private Map<NodeIdentifier, LogicalNode> leafNodes = new HashMap<>();
   private Map<NodeIdentifier, LogicalNode> nodes = new HashMap<>();

@@ -2,20 +2,20 @@ package com.linkedin.thirdeye.taskexecution.dag;
 
 import java.util.Collection;
 
-public interface FrameworkDAG<T extends FrameworkNode> extends DAG<T> {
+public abstract class FrameworkDAG<T extends FrameworkNode> implements DAG<T> {
 
-  T addNode(T node);
+  public abstract T addNode(T node);
 
-  void addEdge(T source, T sink);
+  public abstract void addEdge(T source, T sink);
 
-  T getNode(NodeIdentifier nodeIdentifier);
+  public abstract T getNode(NodeIdentifier nodeIdentifier);
 
-  int size();
+  public abstract int size();
 
-  Collection<T> getRootNodes();
+  public abstract Collection<T> getRootNodes();
 
-  Collection<T> getLeafNodes();
+  public abstract Collection<T> getLeafNodes();
 
-  Collection<T> getAllNodes();
+  public abstract Collection<T> getAllNodes();
 
 }
