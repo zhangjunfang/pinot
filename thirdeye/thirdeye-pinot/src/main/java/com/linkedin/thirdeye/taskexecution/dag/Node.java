@@ -2,17 +2,16 @@ package com.linkedin.thirdeye.taskexecution.dag;
 
 import java.util.Collection;
 
-public interface Node {
+public interface Node<T extends Node<T>> {
 
   NodeIdentifier getIdentifier();
 
-  Class getOperatorClass();
+  // Topology Related Methods
+  void addIncomingNode(T node);
 
-  void addIncomingNode(Node node);
+  void addOutgoingNode(T node);
 
-  void addOutgoingNode(Node node);
+  Collection<T> getIncomingNodes();
 
-  Collection<? extends Node> getIncomingNodes();
-
-  Collection<? extends Node> getOutgoingNodes();
+  Collection<T> getOutgoingNodes();
 }

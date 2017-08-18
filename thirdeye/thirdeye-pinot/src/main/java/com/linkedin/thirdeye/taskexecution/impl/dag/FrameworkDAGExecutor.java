@@ -1,6 +1,7 @@
 package com.linkedin.thirdeye.taskexecution.impl.dag;
 
 import com.linkedin.thirdeye.taskexecution.dag.DAG;
+import com.linkedin.thirdeye.taskexecution.dag.FrameworkNode;
 import com.linkedin.thirdeye.taskexecution.dag.Node;
 import com.linkedin.thirdeye.taskexecution.dag.NodeIdentifier;
 import java.util.Collection;
@@ -16,25 +17,25 @@ import org.slf4j.LoggerFactory;
 
 /**
  * An executor that goes through the DAG and submit the nodes, whose parents are finished, to execution service.
- * An executor takes care of only logical execution (control flow). The physical execution is done by NodeRunner,
+ * An executor takes care of only logical execution (control flow). The physical execution is done by OperatorRunner,
  * which could be executed on other machines.
  */
-public class DAGExecutor {
-  private static final Logger LOG = LoggerFactory.getLogger(DAGExecutor.class);
+public class FrameworkDAGExecutor<T extends FrameworkNode<T>> {
+  private static final Logger LOG = LoggerFactory.getLogger(FrameworkDAGExecutor.class);
   private ExecutorCompletionService<NodeIdentifier> executorCompletionService;
 
   // TODO: Persistent the following status to a DB in case of executor unexpectedly dies
   private Set<NodeIdentifier> processedNodes = new HashSet<>();
-  private Map<NodeIdentifier, NodeRunner> runningNodes = new HashMap<>();
+  private Map<NodeIdentifier, T> runningNodes = new HashMap<>();
 
 
-  public DAGExecutor(ExecutorService executorService) {
+  public FrameworkDAGExecutor(ExecutorService executorService) {
     this.executorCompletionService = new ExecutorCompletionService<>(executorService);
   }
 
-  public void execute(DAG dag, DAGConfig dagConfig) {
-    Collection<? extends Node> nodes = dag.getRootNodes();
-    for (Node node : nodes) {
+  public void execute(DAG<T> dag, DAGConfig dagConfig) {
+    Collection<T> nodes = dag.getRootNodes();
+    for (T node : nodes) {
       processNode(node, dagConfig);
     }
     while (runningNodes.size() > processedNodes.size()) {
@@ -52,12 +53,12 @@ public class DAGExecutor {
         }
         processedNodes.add(nodeIdentifier);
         // Search for the next node to execute
-        Node node = dag.getNode(nodeIdentifier);
-        for (Node outgoingNode : node.getOutgoingNodes()) {
+        T node = dag.getNode(nodeIdentifier);
+        for (T outgoingNode : node.getOutgoingNodes()) {
           processNode(outgoingNode, dagConfig);
         }
       } catch (InterruptedException | ExecutionException e) {
-        // The implementation of NodeRunner needs to guarantee that this block never happens
+        // The implementation of OperatorRunner needs to guarantee that this block never happens
         LOG.error("Aborting execution because unexpected error.", e);
         abortExecution();
       }
@@ -68,17 +69,17 @@ public class DAGExecutor {
     // TODO: wait all runners are stopped and clean up intermediate data
   }
 
-  private void processNode(Node node, DAGConfig dagConfig) {
+  private void processNode(T node, DAGConfig dagConfig) {
     if (!isProcessed(node) && parentsAreProcessed(node)) {
       NodeConfig nodeConfig = dagConfig.getNodeConfig(node.getIdentifier());
-      NodeRunner nodeRunner = new NodeRunner(node, nodeConfig);
-      for (Node pNode : node.getIncomingNodes()) {
-        nodeRunner.addIncomingNode(runningNodes.get(pNode.getIdentifier()));
+      if (nodeConfig == null) {
+        nodeConfig = new NodeConfig();
       }
+      node.setNodeConfig(nodeConfig);
 
       LOG.info("Submitting node -- {} -- for execution.", node.getIdentifier().toString());
-      executorCompletionService.submit(nodeRunner);
-      runningNodes.put(node.getIdentifier(), nodeRunner);
+      executorCompletionService.submit(node);
+      runningNodes.put(node.getIdentifier(), node);
     }
   }
 
@@ -86,7 +87,7 @@ public class DAGExecutor {
     return processedNodes.contains(node.getIdentifier());
   }
 
-  private boolean parentsAreProcessed(Node node) {
+  private boolean parentsAreProcessed(T node) {
     for (Node pNode : node.getIncomingNodes()) {
       if (!processedNodes.contains(pNode.getIdentifier())) {
         return false;
@@ -95,7 +96,7 @@ public class DAGExecutor {
     return true;
   }
 
-  public NodeRunner getNodeRunner(NodeIdentifier nodeIdentifier) {
+  public T getNode(NodeIdentifier nodeIdentifier) {
     return runningNodes.get(nodeIdentifier);
   }
 }

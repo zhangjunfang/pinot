@@ -2,7 +2,7 @@ package com.linkedin.thirdeye.taskexecution.dag;
 
 import java.util.Collection;
 
-public interface DAG<T extends Node> {
+public interface FrameworkDAG<T extends FrameworkNode> extends DAG<T> {
 
   T addNode(T node);
 
@@ -17,4 +17,5 @@ public interface DAG<T extends Node> {
   Collection<T> getLeafNodes();
 
   Collection<T> getAllNodes();
+
 }

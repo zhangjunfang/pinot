@@ -21,8 +21,9 @@ import org.slf4j.LoggerFactory;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-public class DAGExecutorTest {
-  private static final Logger LOG = LoggerFactory.getLogger(DAGExecutorTest.class);
+
+public class FrameworkDAGExecutorTest {
+  private static final Logger LOG = LoggerFactory.getLogger(FrameworkDAGExecutorTest.class);
   private ExecutorService pool = Executors.newFixedThreadPool(10);
 
   /**
@@ -34,11 +35,11 @@ public class DAGExecutorTest {
     Node root = new LogicalNode("root", ExecutionLogOperator.class);
     dag.addNode(root);
 
-    DAGExecutor dagExecutor = new DAGExecutor(pool);
+    FrameworkDAGExecutor<LogicalNode> dagExecutor = new FrameworkDAGExecutor<>(pool);
     dagExecutor.execute(dag, new DAGConfig());
 
     // Check not null
-    OperatorResult executionResult = dagExecutor.getNodeRunner(root.getIdentifier()).getOperatorResult();
+    OperatorResult executionResult = dagExecutor.getNode(root.getIdentifier()).getOperatorResult();
     Assert.assertNotNull(executionResult);
     Assert.assertNotNull(executionResult.getResult());
     // Check whether execution order is correct
@@ -63,11 +64,11 @@ public class DAGExecutorTest {
     dag.addEdge(node1, node2);
     dag.addEdge(node2, node3);
 
-    DAGExecutor dagExecutor = new DAGExecutor(pool);
+    FrameworkDAGExecutor dagExecutor = new FrameworkDAGExecutor(pool);
     dagExecutor.execute(dag, new DAGConfig());
 
     // Check not null
-    OperatorResult executionResult = dagExecutor.getNodeRunner(node3.getIdentifier()).getOperatorResult();
+    OperatorResult executionResult = dagExecutor.getNode(node3.getIdentifier()).getOperatorResult();
     Assert.assertNotNull(executionResult);
     Assert.assertNotNull(executionResult.getResult());
     // Check whether execution order is correct
@@ -112,13 +113,13 @@ public class DAGExecutorTest {
     dag.addEdge(node22, node24);
     dag.addEdge(node24, leaf2);
 
-    DAGExecutor dagExecutor = new DAGExecutor(pool);
+    FrameworkDAGExecutor dagExecutor = new FrameworkDAGExecutor(pool);
     dagExecutor.execute(dag, new DAGConfig());
 
     // Check path 1
     {
       // Check not null
-      OperatorResult executionResult = dagExecutor.getNodeRunner(leaf1.getIdentifier()).getOperatorResult();
+      OperatorResult executionResult = dagExecutor.getNode(leaf1.getIdentifier()).getOperatorResult();
       Assert.assertNotNull(executionResult);
       Assert.assertNotNull(executionResult.getResult());
       // Check whether execution order is correct
@@ -135,7 +136,7 @@ public class DAGExecutorTest {
     // Check path 2
     {
       // Check not null
-      OperatorResult executionResult = dagExecutor.getNodeRunner(leaf2.getIdentifier()).getOperatorResult();
+      OperatorResult executionResult = dagExecutor.getNode(leaf2.getIdentifier()).getOperatorResult();
       Assert.assertNotNull(executionResult);
       Assert.assertNotNull(executionResult.getResult());
       // Check whether execution order is correct
@@ -197,11 +198,11 @@ public class DAGExecutorTest {
     dag.addEdge(root, node12);
     dag.addEdge(node12, leaf);
 
-    DAGExecutor dagExecutor = new DAGExecutor(pool);
+    FrameworkDAGExecutor dagExecutor = new FrameworkDAGExecutor(pool);
     dagExecutor.execute(dag, new DAGConfig());
 
     // Check not null
-    OperatorResult executionResult = dagExecutor.getNodeRunner(leaf.getIdentifier()).getOperatorResult();
+    OperatorResult executionResult = dagExecutor.getNode(leaf.getIdentifier()).getOperatorResult();
     Assert.assertNotNull(executionResult);
     Assert.assertNotNull(executionResult.getResult());
     // Check whether execution order is correct

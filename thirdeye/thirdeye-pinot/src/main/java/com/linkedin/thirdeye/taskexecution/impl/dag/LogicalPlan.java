@@ -1,17 +1,16 @@
 package com.linkedin.thirdeye.taskexecution.impl.dag;
 
-import com.linkedin.thirdeye.taskexecution.dag.DAG;
-import com.linkedin.thirdeye.taskexecution.dag.Node;
+import com.linkedin.thirdeye.taskexecution.dag.FrameworkDAG;
 import com.linkedin.thirdeye.taskexecution.dag.NodeIdentifier;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
-public class LogicalPlan implements DAG {
-  private Map<NodeIdentifier, Node> rootNodes = new HashMap<>();
-  private Map<NodeIdentifier, Node> leafNodes = new HashMap<>();
-  private Map<NodeIdentifier, Node> nodes = new HashMap<>();
+public class LogicalPlan implements FrameworkDAG<LogicalNode> {
+  private Map<NodeIdentifier, LogicalNode> rootNodes = new HashMap<>();
+  private Map<NodeIdentifier, LogicalNode> leafNodes = new HashMap<>();
+  private Map<NodeIdentifier, LogicalNode> nodes = new HashMap<>();
 
   /**
    * Add the given node if it has not been inserted to this DAG and returns the node that has the same {@link
@@ -22,7 +21,7 @@ public class LogicalPlan implements DAG {
    * @return the node that is just being added or the existing node that has the same {@link NodeIdentifier}.
    */
   @Override
-  public Node addNode(Node node) {
+  public LogicalNode addNode(LogicalNode node) {
     return getOrAdd(node);
   }
 
@@ -34,7 +33,7 @@ public class LogicalPlan implements DAG {
    * @param sink   the sink edge of the edge.
    */
   @Override
-  public void addEdge(Node source, Node sink) {
+  public void addEdge(LogicalNode source, LogicalNode sink) {
     source = getOrAdd(source);
     sink = getOrAdd(sink);
 
@@ -58,7 +57,7 @@ public class LogicalPlan implements DAG {
    * @return the node with the given {@link NodeIdentifier}.
    */
   @Override
-  public Node getNode(NodeIdentifier nodeIdentifier) {
+  public LogicalNode getNode(NodeIdentifier nodeIdentifier) {
     return nodes.get(nodeIdentifier);
   }
 
@@ -70,7 +69,7 @@ public class LogicalPlan implements DAG {
    *
    * @return the node with the same {@link NodeIdentifier}.
    */
-  private Node getOrAdd(Node node) {
+  private LogicalNode getOrAdd(LogicalNode node) {
     NodeIdentifier nodeIdentifier = node.getIdentifier();
     if (!nodes.containsKey(nodeIdentifier)) {
       nodes.put(nodeIdentifier, node);
@@ -93,17 +92,17 @@ public class LogicalPlan implements DAG {
   }
 
   @Override
-  public Collection<? extends Node> getRootNodes() {
+  public Collection<LogicalNode> getRootNodes() {
     return new HashSet<>(rootNodes.values());
   }
 
   @Override
-  public Collection<? extends Node> getLeafNodes() {
+  public Collection<LogicalNode> getLeafNodes() {
     return new HashSet<>(leafNodes.values());
   }
 
   @Override
-  public Collection<? extends Node> getAllNodes() {
+  public Collection<LogicalNode> getAllNodes() {
     return new HashSet<>(nodes.values());
   }
 }

@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
+
 public class LogicalPlanTest {
   private DAG dag;
   private Node root;

@@ -1,5 +1,6 @@
 package com.linkedin.thirdeye.taskexecution.impl.dag;
 
+import com.linkedin.thirdeye.taskexecution.dag.FrameworkNode;
 import com.linkedin.thirdeye.taskexecution.dag.Node;
 import com.linkedin.thirdeye.taskexecution.dag.NodeIdentifier;
 import com.linkedin.thirdeye.taskexecution.operator.Operator;
@@ -9,60 +10,72 @@ import com.linkedin.thirdeye.taskexecution.operator.OperatorResult;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class NodeRunner implements Callable<NodeIdentifier>, Node {
-  private static final Logger LOG = LoggerFactory.getLogger(NodeRunner.class);
 
-  private Node node;
+class OperatorRunner implements FrameworkNode<OperatorRunner> {
+  private static final Logger LOG = LoggerFactory.getLogger(OperatorRunner.class);
+
+  private FrameworkNode logicalParentNode;
   private NodeConfig nodeConfig;
+  // TODO: Change to OperatorResultReader, which could read result from a remote DB or logicalParentNode.
   private OperatorResult operatorResult;
   private ExecutionStatus executionStatus = ExecutionStatus.RUNNING;
-  private Set<NodeRunner> incomingNodeRunners = new HashSet<>();
+  private Set<OperatorRunner> incomingOperatorRunners = new HashSet<>();
 
 
-  public NodeRunner(Node node, NodeConfig nodeConfig) {
-    this.node = node;
+  public OperatorRunner(FrameworkNode logicalParentNode, NodeConfig nodeConfig) {
+    this.logicalParentNode = logicalParentNode;
     this.nodeConfig = nodeConfig;
   }
 
-  public Node getNode() {
-    return node;
-  }
-
   public NodeIdentifier getIdentifier() {
-    return node.getIdentifier();
+    return logicalParentNode.getIdentifier();
   }
 
   @Override
   public Class getOperatorClass() {
-    return node.getOperatorClass();
+    return logicalParentNode.getOperatorClass();
+  }
+
+  public void addIncomingNode(OperatorRunner incomingOperatorRunner) {
+    incomingOperatorRunners.add(incomingOperatorRunner);
   }
 
   @Override
-  public void addIncomingNode(Node node) {
-    addIncomingNode((NodeRunner) node);
-  }
-
-  public void addIncomingNode(NodeRunner incomingNodeRunner) {
-    incomingNodeRunners.add(incomingNodeRunner);
-  }
-
-  @Override
-  public void addOutgoingNode(Node node) {
+  public void addOutgoingNode(OperatorRunner node) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public Collection<NodeRunner> getIncomingNodes() {
-    return incomingNodeRunners;
+  public Collection<OperatorRunner> getIncomingNodes() {
+    return incomingOperatorRunners;
   }
 
   @Override
-  public Collection<NodeRunner> getOutgoingNodes() {
+  public Collection<OperatorRunner> getOutgoingNodes() {
     return null;
+  }
+
+  @Override
+  public FrameworkNode getLogicalParentNode() {
+    return logicalParentNode;
+  }
+
+  @Override
+  public FrameworkNode getLogicalChildNode() {
+    return null;
+  }
+
+  @Override
+  public void setNodeConfig(NodeConfig nodeConfig) {
+    this.nodeConfig = nodeConfig;
+  }
+
+  @Override
+  public NodeConfig getNodeConfig() {
+    return nodeConfig;
   }
 
   public OperatorResult getOperatorResult() {
@@ -76,15 +89,15 @@ class NodeRunner implements Callable<NodeIdentifier>, Node {
   @Override
   public NodeIdentifier call() throws Exception {
     try {
-      int numRety = nodeConfig.numRetryAtError();
-      for (int i = 0; i <= numRety; ++i) {
+      int numRetry = nodeConfig.numRetryAtError();
+      for (int i = 0; i <= numRetry; ++i) {
         try {
           OperatorConfig operatorConfig = convertNodeConfigToOperatorConfig(nodeConfig);
-          Operator operator = initializeOperator(node.getOperatorClass(), operatorConfig);
-          OperatorContext operatorContext = prepareInputOperatorContext(node, incomingNodeRunners);
+          Operator operator = initializeOperator(logicalParentNode.getOperatorClass(), operatorConfig);
+          OperatorContext operatorContext = prepareInputOperatorContext(logicalParentNode, incomingOperatorRunners);
           operatorResult = operator.run(operatorContext);
         } catch (Exception e) {
-          if (i == numRety) {
+          if (i == numRetry) {
             setFailure();
           }
         }
@@ -99,7 +112,7 @@ class NodeRunner implements Callable<NodeIdentifier>, Node {
   }
 
   private void setFailure() {
-    LOG.error("Failed to execute node: {}.", node.getIdentifier());
+    LOG.error("Failed to execute logicalParentNode: {}.", logicalParentNode.getIdentifier());
     operatorResult = new OperatorResult();
     if (nodeConfig.skipAtFailure()) {
       executionStatus = ExecutionStatus.SKIPPED;
@@ -124,14 +137,12 @@ class NodeRunner implements Callable<NodeIdentifier>, Node {
     }
   }
 
-  private OperatorContext prepareInputOperatorContext(Node currentNode, Collection<NodeRunner> incomingNodes) {
+  private OperatorContext prepareInputOperatorContext(Node currentNode, Collection<OperatorRunner> incomingNodes) {
     OperatorContext operatorContext = new OperatorContext();
     operatorContext.setNode(currentNode);
-    for (NodeRunner incomingNode : incomingNodes) {
+    for (OperatorRunner incomingNode : incomingNodes) {
       operatorContext.addOperatorResult(incomingNode.getIdentifier(), incomingNode.getOperatorResult());
     }
     return operatorContext;
   }
-
-
 }
