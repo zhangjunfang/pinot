@@ -24,6 +24,10 @@ import com.linkedin.pinot.core.io.reader.impl.v1.MultiValueReaderContext;
 import com.linkedin.pinot.core.segment.index.ColumnMetadata;
 import com.linkedin.pinot.core.segment.index.SegmentMetadataImpl;
 import com.linkedin.pinot.core.segment.memory.PinotDataBuffer;
+import com.linkedin.pinot.core.segment.store.ColumnIndexType;
+import com.linkedin.pinot.core.segment.store.SegmentDirectory;
+import com.linkedin.pinot.core.segment.store.SegmentDirectory.Reader;
+
 import java.io.File;
 import java.io.FileWriter;
 import java.io.RandomAccessFile;
@@ -32,7 +36,9 @@ import java.nio.channels.FileChannel;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+
 import me.lemire.integercompression.BitPacking;
+
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
 
@@ -151,11 +157,11 @@ public class ForwardIndexReaderBenchmark {
 
   }
 
-  public static void multiValuedReadBenchMarkV1(File file, int numDocs, int totalNumValues,
+  public static void multiValuedReadBenchMarkV1(PinotDataBuffer pinotDataBuffer, int numDocs, int totalNumValues,
       int maxEntriesPerDoc, int columnSizeInBits) throws Exception {
     System.out.println("******************************************************************");
     System.out.println(
-        "Analyzing " + file.getName() + " numDocs:" + numDocs + ", totalNumValues:" + totalNumValues
+        "Analyzing " + pinotDataBuffer.getName() + " numDocs:" + numDocs + ", totalNumValues:" + totalNumValues
             + ", maxEntriesPerDoc:" + maxEntriesPerDoc + ", numBits:" + columnSizeInBits);
     long start, end;
     boolean readFile = true;
@@ -163,13 +169,13 @@ public class ForwardIndexReaderBenchmark {
     boolean contextualRead = true;
     boolean signed = false;
     boolean isMmap = false;
-    PinotDataBuffer heapBuffer = PinotDataBuffer.fromFile(file, ReadMode.mmap, FileChannel.MapMode.READ_ONLY, "benchmarking");
+    PinotDataBuffer heapBuffer = PinotDataBuffer.fromFile(pinotDataBuffer, ReadMode.mmap, FileChannel.MapMode.READ_ONLY, "benchmarking");
     BaseSingleColumnMultiValueReader reader =
         new com.linkedin.pinot.core.io.reader.impl.v1.FixedBitMultiValueReader(heapBuffer, numDocs,
             totalNumValues, columnSizeInBits, signed);
 
     int[] intArray = new int[maxEntriesPerDoc];
-    File outfile = new File("/tmp/" + file.getName() + ".raw");
+    File outfile = new File("/tmp/" + pinotDataBuffer.getName() + ".raw");
     FileWriter fw = new FileWriter(outfile);
     for (int i = 0; i < numDocs; i++) {
       int length = reader.getIntArray(i, intArray);
@@ -188,11 +194,11 @@ public class ForwardIndexReaderBenchmark {
     // sequential read
     if (readFile) {
       DescriptiveStatistics stats = new DescriptiveStatistics();
-      RandomAccessFile raf = new RandomAccessFile(file, "rw");
-      ByteBuffer buffer = ByteBuffer.allocateDirect((int) file.length());
+      RandomAccessFile raf = new RandomAccessFile(pinotDataBuffer, "rw");
+      ByteBuffer buffer = ByteBuffer.allocateDirect((int) pinotDataBuffer.length());
       raf.getChannel().read(buffer);
       for (int run = 0; run < MAX_RUNS; run++) {
-        long length = file.length();
+        long length = pinotDataBuffer.length();
         start = System.currentTimeMillis();
         for (int i = 0; i < length; i++) {
           byte b = buffer.get(i);
@@ -200,7 +206,7 @@ public class ForwardIndexReaderBenchmark {
         end = System.currentTimeMillis();
         stats.addValue((end - start));
       }
-      System.out.println("v1 multi value read bytes stats for " + file.getName());
+      System.out.println("v1 multi value read bytes stats for " + pinotDataBuffer.getName());
       System.out.println(
           stats.toString().replaceAll("\n", ", ") + " raw:" + Arrays.toString(stats.getValues()));
 
@@ -216,7 +222,7 @@ public class ForwardIndexReaderBenchmark {
         end = System.currentTimeMillis();
         stats.addValue((end - start));
       }
-      System.out.println("v1 multi value sequential read one stats for " + file.getName());
+      System.out.println("v1 multi value sequential read one stats for " + pinotDataBuffer.getName());
       System.out.println(
           stats.toString().replaceAll("\n", ", ") + " raw:" + Arrays.toString(stats.getValues()));
     }
@@ -234,7 +240,7 @@ public class ForwardIndexReaderBenchmark {
         stats.addValue((end - start));
       }
       System.out
-          .println("v1 multi value sequential read one with context stats for " + file.getName());
+          .println("v1 multi value sequential read one with context stats for " + pinotDataBuffer.getName());
       System.out.println(
           stats.toString().replaceAll("\n", ", ") + " raw:" + Arrays.toString(stats.getValues()));
 
@@ -245,12 +251,12 @@ public class ForwardIndexReaderBenchmark {
 
   }
 
-  public static void multiValuedReadBenchMarkV2(File file, int numDocs, int totalNumValues,
+  public static void multiValuedReadBenchMarkV2(PinotDataBuffer pinotDataBuffer, int numDocs, int totalNumValues,
       int maxEntriesPerDoc, int columnSizeInBits) throws Exception {
     boolean signed = false;
     boolean isMmap = false;
     boolean readOneEachTime = true;
-    PinotDataBuffer heapBuffer = PinotDataBuffer.fromFile(file, ReadMode.heap, FileChannel.MapMode.READ_ONLY, "benchmarking");
+    PinotDataBuffer heapBuffer = PinotDataBuffer.fromFile(pinotDataBuffer, ReadMode.heap, FileChannel.MapMode.READ_ONLY, "benchmarking");
     com.linkedin.pinot.core.io.reader.impl.v2.FixedBitMultiValueReader reader =
         new com.linkedin.pinot.core.io.reader.impl.v2.FixedBitMultiValueReader(heapBuffer, numDocs,
             totalNumValues, columnSizeInBits, signed);
@@ -270,7 +276,7 @@ public class ForwardIndexReaderBenchmark {
         end = System.currentTimeMillis();
         stats.addValue((end - start));
       }
-      System.out.println("v2 multi value sequential read one stats for " + file.getName());
+      System.out.println("v2 multi value sequential read one stats for " + pinotDataBuffer.getName());
       System.out.println(
           stats.toString().replaceAll("\n", ", ") + " raw:" + Arrays.toString(stats.getValues()));
     }
@@ -287,6 +293,9 @@ public class ForwardIndexReaderBenchmark {
     SegmentMetadataImpl segmentMetadata = new SegmentMetadataImpl(new File(indexDir));
     String segmentVersion = segmentMetadata.getVersion();
     Set<String> columns = segmentMetadata.getAllColumns();
+    SegmentDirectory segmentDir =
+                    SegmentDirectory.createFromLocalFS(new File(indexDir), segmentMetadata, ReadMode.mmap);
+    Reader reader = segmentDir.createReader();
     for (String column : columns) {
       if (includeColumns != null && !includeColumns.isEmpty()) {
         if (!includeColumns.contains(column)) {
@@ -299,10 +308,10 @@ public class ForwardIndexReaderBenchmark {
         // continue;
       }
       if (!columnMetadata.isSingleValue()) {
-
-        String fwdIndexFileName = segmentMetadata.getForwardIndexFileName(column);
-        File fwdIndexFile = new File(indexDir, fwdIndexFileName);
-        multiValuedReadBenchMark(segmentVersion, fwdIndexFile, segmentMetadata.getTotalDocs(),
+        PinotDataBuffer fwdIndexBuffer = reader.getIndexFor(column, ColumnIndexType.FORWARD_INDEX);
+        //String fwdIndexFileName = segmentMetadata.getForwardIndexFileName(column);
+        //File fwdIndexFile = new File(indexDir, fwdIndexFileName);
+        multiValuedReadBenchMark(segmentVersion, fwdIndexBuffer, segmentMetadata.getTotalDocs(),
             columnMetadata.getTotalNumberOfEntries(), columnMetadata.getMaxNumberOfMultiValues(),
             columnMetadata.getBitsPerElement());
       } else if (columnMetadata.isSingleValue() && !columnMetadata.isSorted()) {
@@ -314,14 +323,14 @@ public class ForwardIndexReaderBenchmark {
     }
   }
 
-  private static void multiValuedReadBenchMark(String segmentVersion, File fwdIndexFile,
+  private static void multiValuedReadBenchMark(String segmentVersion, PinotDataBuffer pinotDataBuffer,
       int totalDocs, int totalNumberOfEntries, int maxNumberOfMultiValues, int bitsPerElement)
           throws Exception {
     if (SegmentVersion.v1.name().equals(segmentVersion)) {
-      multiValuedReadBenchMarkV1(fwdIndexFile, totalDocs, totalNumberOfEntries,
+      multiValuedReadBenchMarkV1(pinotDataBuffer, totalDocs, totalNumberOfEntries,
           maxNumberOfMultiValues, bitsPerElement);
     } else if (SegmentVersion.v2.name().equals(segmentVersion)) {
-      multiValuedReadBenchMarkV2(fwdIndexFile, totalDocs, totalNumberOfEntries,
+      multiValuedReadBenchMarkV2(pinotDataBuffer, totalDocs, totalNumberOfEntries,
           maxNumberOfMultiValues, bitsPerElement);
     }
   }
