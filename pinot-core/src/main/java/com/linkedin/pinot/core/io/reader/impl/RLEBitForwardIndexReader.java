@@ -61,8 +61,11 @@ public class RLEBitForwardIndexReader
     }
 
     int row = context.row;
-    if ((row != -1) && (indexReader.getNumberOfRows() >= row+2)
-        && (docId < indexReader.getInt(context.row + 2, 1))) {
+    boolean a = (row != -1);
+    boolean b = (indexReader.getNumberOfRows() >= row+2);
+    boolean c = (docId < indexReader.getInt(context.row + 2, 1));
+    if (a && b
+        && c) {
       // Next run
       row++;
     } else {

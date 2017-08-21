@@ -48,13 +48,13 @@ import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 public class ForwardIndexReaderBenchmark {
   static int MAX_RUNS = 10;
 
-  public static void singleValuedReadBenchMarkV1(File file, int numDocs, int columnSizeInBits)
+  public static void singleValuedReadBenchMarkV1(PinotDataBuffer pinotDataBuffer, int numDocs, int columnSizeInBits)
       throws Exception {
     boolean signed = false;
     boolean isMmap = false;
-    PinotDataBuffer heapBuffer = PinotDataBuffer.fromFile(file, ReadMode.heap, FileChannel.MapMode.READ_ONLY, "benchmark");
+    //PinotDataBuffer heapBuffer = PinotDataBuffer.fromFile(fwdIndexBuffer, ReadMode.heap, FileChannel.MapMode.READ_ONLY, "benchmark");
     BaseSingleColumnSingleValueReader reader =
-        new com.linkedin.pinot.core.io.reader.impl.v1.FixedBitSingleValueReader(heapBuffer, numDocs,
+        new com.linkedin.pinot.core.io.reader.impl.v1.FixedBitSingleValueReader(pinotDataBuffer, numDocs,
             columnSizeInBits, signed);
     // sequential read
     long start, end;
@@ -67,14 +67,14 @@ public class ForwardIndexReaderBenchmark {
       end = System.currentTimeMillis();
       stats.addValue(end - start);
     }
-    System.out.println(" v1 sequential read stats for " + file.getName());
+    //System.out.println(" v1 sequential read stats for " + pinotDataBuffer.getName());
     System.out.println(
         stats.toString().replaceAll("\n", ", ") + " raw:" + Arrays.toString(stats.getValues()));
     reader.close();
-    heapBuffer.close();
+    pinotDataBuffer.close();
   }
 
-  public static void singleValuedReadBenchMarkV2(File file, int numDocs, int numBits)
+  /*public static void singleValuedReadBenchMarkV2(PinotDataBuffer fwdIndexBuffer, int numDocs, int numBits)
       throws Exception {
     boolean signed = false;
     boolean isMmap = false;
@@ -84,15 +84,15 @@ public class ForwardIndexReaderBenchmark {
     boolean batchRead = true;
     boolean singleRead = true;
 
-    PinotDataBuffer heapBuffer = PinotDataBuffer.fromFile(file, ReadMode.heap, FileChannel.MapMode.READ_ONLY, "benchmarking");
+    PinotDataBuffer heapBuffer = PinotDataBuffer.fromFile(fwdIndexBuffer, ReadMode.heap, FileChannel.MapMode.READ_ONLY, "benchmarking");
     com.linkedin.pinot.core.io.reader.impl.v2.FixedBitSingleValueReader reader =
         new com.linkedin.pinot.core.io.reader.impl.v2.FixedBitSingleValueReader(heapBuffer, numDocs,
             numBits, signed);
 
     if (fullScan) {
       DescriptiveStatistics stats = new DescriptiveStatistics();
-      ByteBuffer buffer = ByteBuffer.allocateDirect((int) file.length());
-      RandomAccessFile raf = new RandomAccessFile(file, "r");
+      ByteBuffer buffer = ByteBuffer.allocateDirect((int) fwdIndexBuffer.length());
+      RandomAccessFile raf = new RandomAccessFile(fwdIndexBuffer, "r");
       raf.getChannel().read(buffer);
       raf.close();
       int[] input = new int[numBits];
@@ -109,7 +109,7 @@ public class ForwardIndexReaderBenchmark {
         end = System.currentTimeMillis();
         stats.addValue((end - start));
       }
-      System.out.println(" v2 full scan stats for " + file.getName());
+      System.out.println(" v2 full scan stats for " + fwdIndexBuffer.getName());
       System.out.println(
           stats.toString().replaceAll("\n", ", ") + " raw:" + Arrays.toString(stats.getValues()));
     }
@@ -124,7 +124,7 @@ public class ForwardIndexReaderBenchmark {
         end = System.currentTimeMillis();
         stats.addValue((end - start));
       }
-      System.out.println(" v2 sequential single read for " + file.getName());
+      System.out.println(" v2 sequential single read for " + fwdIndexBuffer.getName());
       System.out.println(
           stats.toString().replaceAll("\n", ", ") + " raw:" + Arrays.toString(stats.getValues()));
     }
@@ -149,19 +149,19 @@ public class ForwardIndexReaderBenchmark {
         end = System.currentTimeMillis();
         stats.addValue((end - start));
       }
-      System.out.println("v2 sequential batch read stats for " + file.getName());
+      System.out.println("v2 sequential batch read stats for " + fwdIndexBuffer.getName());
       System.out.println(
           stats.toString().replaceAll("\n", ", ") + " raw:" + Arrays.toString(stats.getValues()));
     }
     reader.close();
 
-  }
+  }*/
 
-  public static void multiValuedReadBenchMarkV1(PinotDataBuffer pinotDataBuffer, int numDocs, int totalNumValues,
+ /* public static void multiValuedReadBenchMarkV1(PinotDataBuffer pinotDataBuffer, int numDocs, int totalNumValues,
       int maxEntriesPerDoc, int columnSizeInBits) throws Exception {
     System.out.println("******************************************************************");
     System.out.println(
-        "Analyzing " + pinotDataBuffer.getName() + " numDocs:" + numDocs + ", totalNumValues:" + totalNumValues
+        "Analyzing " + " numDocs:" + numDocs + ", totalNumValues:" + totalNumValues
             + ", maxEntriesPerDoc:" + maxEntriesPerDoc + ", numBits:" + columnSizeInBits);
     long start, end;
     boolean readFile = true;
@@ -169,13 +169,13 @@ public class ForwardIndexReaderBenchmark {
     boolean contextualRead = true;
     boolean signed = false;
     boolean isMmap = false;
-    PinotDataBuffer heapBuffer = PinotDataBuffer.fromFile(pinotDataBuffer, ReadMode.mmap, FileChannel.MapMode.READ_ONLY, "benchmarking");
+    //PinotDataBuffer heapBuffer = PinotDataBuffer.fromFile(pinotDataBuffer, ReadMode.mmap, FileChannel.MapMode.READ_ONLY, "benchmarking");
     BaseSingleColumnMultiValueReader reader =
-        new com.linkedin.pinot.core.io.reader.impl.v1.FixedBitMultiValueReader(heapBuffer, numDocs,
+        new com.linkedin.pinot.core.io.reader.impl.v1.FixedBitMultiValueReader(pinotDataBuffer, numDocs,
             totalNumValues, columnSizeInBits, signed);
 
     int[] intArray = new int[maxEntriesPerDoc];
-    File outfile = new File("/tmp/" + pinotDataBuffer.getName() + ".raw");
+    File outfile = new File("/tmp/" + "rle" + ".raw");
     FileWriter fw = new FileWriter(outfile);
     for (int i = 0; i < numDocs; i++) {
       int length = reader.getIntArray(i, intArray);
@@ -256,9 +256,9 @@ public class ForwardIndexReaderBenchmark {
     boolean signed = false;
     boolean isMmap = false;
     boolean readOneEachTime = true;
-    PinotDataBuffer heapBuffer = PinotDataBuffer.fromFile(pinotDataBuffer, ReadMode.heap, FileChannel.MapMode.READ_ONLY, "benchmarking");
+//    PinotDataBuffer heapBuffer = PinotDataBuffer.fromFile(pinotDataBuffer, ReadMode.heap, FileChannel.MapMode.READ_ONLY, "benchmarking");
     com.linkedin.pinot.core.io.reader.impl.v2.FixedBitMultiValueReader reader =
-        new com.linkedin.pinot.core.io.reader.impl.v2.FixedBitMultiValueReader(heapBuffer, numDocs,
+        new com.linkedin.pinot.core.io.reader.impl.v2.FixedBitMultiValueReader(pinotDataBuffer, numDocs,
             totalNumValues, columnSizeInBits, signed);
 
     int[] intArray = new int[maxEntriesPerDoc];
@@ -276,13 +276,12 @@ public class ForwardIndexReaderBenchmark {
         end = System.currentTimeMillis();
         stats.addValue((end - start));
       }
-      System.out.println("v2 multi value sequential read one stats for " + pinotDataBuffer.getName());
       System.out.println(
           stats.toString().replaceAll("\n", ", ") + " raw:" + Arrays.toString(stats.getValues()));
     }
     reader.close();
-    heapBuffer.close();
-  }
+    pinotDataBuffer.close();
+  }*/
 
   private static void benchmarkForwardIndex(String indexDir) throws Exception {
     benchmarkForwardIndex(indexDir, null);
@@ -315,9 +314,10 @@ public class ForwardIndexReaderBenchmark {
             columnMetadata.getTotalNumberOfEntries(), columnMetadata.getMaxNumberOfMultiValues(),
             columnMetadata.getBitsPerElement());
       } else if (columnMetadata.isSingleValue() && !columnMetadata.isSorted()) {
-        String fwdIndexFileName = segmentMetadata.getForwardIndexFileName(column);
-        File fwdIndexFile = new File(indexDir, fwdIndexFileName);
-        singleValuedReadBenchMark(segmentVersion, fwdIndexFile, segmentMetadata.getTotalDocs(),
+        //String fwdIndexFileName = segmentMetadata.getForwardIndexFileName(column);
+        //File fwdIndexFile = new File(indexDir, fwdIndexFileName);
+        PinotDataBuffer fwdIndexBuffer = reader.getIndexFor(column, ColumnIndexType.FORWARD_INDEX);
+        singleValuedReadBenchMark(segmentVersion, fwdIndexBuffer, segmentMetadata.getTotalDocs(),
             columnMetadata.getBitsPerElement());
       }
     }
@@ -327,21 +327,21 @@ public class ForwardIndexReaderBenchmark {
       int totalDocs, int totalNumberOfEntries, int maxNumberOfMultiValues, int bitsPerElement)
           throws Exception {
     if (SegmentVersion.v1.name().equals(segmentVersion)) {
-      multiValuedReadBenchMarkV1(pinotDataBuffer, totalDocs, totalNumberOfEntries,
-          maxNumberOfMultiValues, bitsPerElement);
+      //multiValuedReadBenchMarkV1(pinotDataBuffer, totalDocs, totalNumberOfEntries,
+      //    maxNumberOfMultiValues, bitsPerElement);
     } else if (SegmentVersion.v2.name().equals(segmentVersion)) {
-      multiValuedReadBenchMarkV2(pinotDataBuffer, totalDocs, totalNumberOfEntries,
-          maxNumberOfMultiValues, bitsPerElement);
+      //multiValuedReadBenchMarkV2(pinotDataBuffer, totalDocs, totalNumberOfEntries,
+       //   maxNumberOfMultiValues, bitsPerElement);
     }
   }
 
-  private static void singleValuedReadBenchMark(String segmentVersion, File fwdIndexFile,
+  private static void singleValuedReadBenchMark(String segmentVersion, PinotDataBuffer fwdIndexBuffer,
       int totalDocs, int bitsPerElement) throws Exception {
-    if (SegmentVersion.v1.name().equals(segmentVersion)) {
-      singleValuedReadBenchMarkV1(fwdIndexFile, totalDocs, bitsPerElement);
-    } else if (SegmentVersion.v2.name().equals(segmentVersion)) {
-      singleValuedReadBenchMarkV2(fwdIndexFile, totalDocs, bitsPerElement);
-    }
+    //if (SegmentVersion.v1.name().equals(segmentVersion)) {
+      singleValuedReadBenchMarkV1(fwdIndexBuffer, totalDocs, bitsPerElement);
+    //} else if (SegmentVersion.v2.name().equals(segmentVersion)) {
+      //singleValuedReadBenchMarkV2(fwdIndexBuffer, totalDocs, bitsPerElement);
+    //}
   }
 
   /**
