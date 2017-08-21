@@ -81,10 +81,10 @@ public class ParquetTest {
     final int PAGE_SIZE = 20000;
     final int valsPerPage = 100 ;
     long parquetFileSize = 0;
-    String outputFileName = column+ ".rle";
-    String outputFileName1 = column + ".data";
-    String outputFileName2 = column + ".orig";
-    String outputFileName3 = column + ".new";
+    String outputFileName = "/tmp/rle/" + column+ ".rle";
+    String outputFileName1 = "/tmp/rle/" + column + ".data";
+    String outputFileName2 = "/tmp/rle/" + column + ".orig";
+    String outputFileName3 = "/tmp/rle/" + column + ".new";
     FileOutputStream outputFile = new FileOutputStream(outputFileName);
     PrintWriter outputFile1 = new PrintWriter(outputFileName1, "UTF-8");
     PrintWriter outputFile2 = new PrintWriter(outputFileName2, "UTF-8");
@@ -144,7 +144,7 @@ public class ParquetTest {
     FixedByteSingleValueMultiColReader bookmarkFileReader = new FixedByteSingleValueMultiColReader(buffer1, numRuns/128, new int[] {4});
     RLEForwardIndexReader rle1_reader = new RLEForwardIndexReader(rawFileReader, bookmarkFileReader, numDocs/numRuns*128, numDocs);
 
-    outputFileName3 = column + ".rle1_read";
+    outputFileName3 = "/tmp/rle/" + column + ".rle1_read";
     outputFile3 = new PrintWriter(outputFileName3, "UTF-8");
     for (int i = 0; i < numDocs; i++) {
       int v = rle1_reader.getInt(i);
@@ -152,7 +152,7 @@ public class ParquetTest {
     }
     outputFile3.close();
 
-    outputFileName3 = column + ".rle1_scan";
+    outputFileName3 = "/tmp/rle/" + column + ".rle1_scan";
     outputFile3 = new PrintWriter(outputFileName3, "UTF-8");
     RLEValueReaderContext context = rle1_reader.createContext();
     for (int i = 0; i < numDocs; i++) {
@@ -176,7 +176,7 @@ public class ParquetTest {
         1, new int[] {RLEBitForwardIndexCreator.getNumOfBits(numRuns+1)});
     RLEBitForwardIndexReader rle2_reader = new RLEBitForwardIndexReader(rawFileReader2, bookmarkFileReader2, numDocs/numRuns*128, numDocs);
 
-    outputFileName3 = column + ".rle2_read";
+    outputFileName3 = "/tmp/rle/" + column + ".rle2_read";
     outputFile3 = new PrintWriter(outputFileName3, "UTF-8");
     for (int i = 0; i < numDocs; i++) {
       int v = rle2_reader.getInt(i);
@@ -186,7 +186,7 @@ public class ParquetTest {
 
     //rle2_reader.close();
     //rle2_reader = new RLEBitForwardIndexReader(rawFileReader2, bookmarkFileReader2, numDocs/numRuns*128, numDocs);
-    outputFileName3 = column + ".rle2_scan";
+    outputFileName3 = "/tmp/rle/" + column + ".rle2_scan";
     outputFile3 = new PrintWriter(outputFileName3, "UTF-8");
     context = rle2_reader.createContext();
     for (int i = 0; i < numDocs; i++) {
