@@ -1,11 +1,12 @@
 package com.linkedin.thirdeye.taskexecution.impl.dag;
 
 import com.linkedin.thirdeye.taskexecution.dag.DAG;
+import com.linkedin.thirdeye.taskexecution.dag.ExecutionResult;
+import com.linkedin.thirdeye.taskexecution.dag.ExecutionResults;
 import com.linkedin.thirdeye.taskexecution.dag.NodeIdentifier;
 import com.linkedin.thirdeye.taskexecution.operator.Operator;
 import com.linkedin.thirdeye.taskexecution.operator.OperatorConfig;
 import com.linkedin.thirdeye.taskexecution.operator.OperatorContext;
-import com.linkedin.thirdeye.taskexecution.operator.OperatorResult;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -24,7 +25,7 @@ import org.testng.annotations.Test;
 
 public class DAGExecutorTest {
   private static final Logger LOG = LoggerFactory.getLogger(DAGExecutorTest.class);
-  private ExecutorService pool = Executors.newFixedThreadPool(10);
+  private ExecutorService threadPool = Executors.newFixedThreadPool(10);
 
   /**
    * DAG: root
@@ -32,16 +33,19 @@ public class DAGExecutorTest {
   @Test
   public void testOneNodeExecution() {
     DAG<LogicalNode> dag = new LogicalPlan();
-    LogicalNode root = new LogicalNode("root", ExecutionLogOperator.class);
+    LogicalNode root = new LogicalNode("root", LogOperator.class);
     dag.addNode(root);
 
-    DAGExecutor<LogicalNode> dagExecutor = new DAGExecutor<>(pool);
+    DAGExecutor<LogicalNode> dagExecutor = new DAGExecutor<>(threadPool);
     DAGConfig dagConfig = new DAGConfig();
     dagConfig.setStopAtFailure(true);
     dagExecutor.execute(dag, dagConfig);
 
     // Check not null
-    OperatorResult executionResult = dagExecutor.getNode(root.getIdentifier()).getOperatorResult();
+    ExecutionResults executionResults = dagExecutor.getNode(root.getIdentifier()).getExecutionResults();
+    Assert.assertNotNull(executionResults);
+
+    ExecutionResult executionResult = (ExecutionResult) executionResults.getResults().iterator().next();
     Assert.assertNotNull(executionResult);
     Assert.assertNotNull(executionResult.getResult());
     // Check whether execution order is correct
@@ -60,17 +64,20 @@ public class DAGExecutorTest {
   @Test
   public void testOneNodeChainExecution() {
     DAG<LogicalNode> dag = new LogicalPlan();
-    LogicalNode node1 = new LogicalNode("1", ExecutionLogOperator.class);
-    LogicalNode node2 = new LogicalNode("2", ExecutionLogOperator.class);
-    LogicalNode node3 = new LogicalNode("3", ExecutionLogOperator.class);
+    LogicalNode node1 = new LogicalNode("1", LogOperator.class);
+    LogicalNode node2 = new LogicalNode("2", LogOperator.class);
+    LogicalNode node3 = new LogicalNode("3", LogOperator.class);
     dag.addEdge(node1, node2);
     dag.addEdge(node2, node3);
 
-    DAGExecutor<LogicalNode> dagExecutor = new DAGExecutor<>(pool);
+    DAGExecutor<LogicalNode> dagExecutor = new DAGExecutor<>(threadPool);
     dagExecutor.execute(dag, new DAGConfig());
 
     // Check not null
-    OperatorResult executionResult = dagExecutor.getNode(node3.getIdentifier()).getOperatorResult();
+    ExecutionResults executionResults = dagExecutor.getNode(node3.getIdentifier()).getExecutionResults();
+    Assert.assertNotNull(executionResults);
+
+    ExecutionResult executionResult = (ExecutionResult) executionResults.getResults().iterator().next();
     Assert.assertNotNull(executionResult);
     Assert.assertNotNull(executionResult.getResult());
     // Check whether execution order is correct
@@ -98,30 +105,33 @@ public class DAGExecutorTest {
   @Test
   public void testTwoNodeChainsExecution() {
     DAG<LogicalNode> dag = new LogicalPlan();
-    LogicalNode node11 = new LogicalNode("root1", ExecutionLogOperator.class);
-    LogicalNode node12 = new LogicalNode("node12", ExecutionLogOperator.class);
-    LogicalNode leaf1 = new LogicalNode("leaf1", ExecutionLogOperator.class);
+    LogicalNode node11 = new LogicalNode("root1", LogOperator.class);
+    LogicalNode node12 = new LogicalNode("node12", LogOperator.class);
+    LogicalNode leaf1 = new LogicalNode("leaf1", LogOperator.class);
     dag.addEdge(node11, node12);
     dag.addEdge(node12, leaf1);
 
-    LogicalNode node21 = new LogicalNode("root2", ExecutionLogOperator.class);
-    LogicalNode node22 = new LogicalNode("node22", ExecutionLogOperator.class);
-    LogicalNode node23 = new LogicalNode("node23", ExecutionLogOperator.class);
-    LogicalNode node24 = new LogicalNode("node24", ExecutionLogOperator.class);
-    LogicalNode leaf2 = new LogicalNode("leaf2", ExecutionLogJoinOperator.class);
+    LogicalNode node21 = new LogicalNode("root2", LogOperator.class);
+    LogicalNode node22 = new LogicalNode("node22", LogOperator.class);
+    LogicalNode node23 = new LogicalNode("node23", LogOperator.class);
+    LogicalNode node24 = new LogicalNode("node24", LogOperator.class);
+    LogicalNode leaf2 = new LogicalNode("leaf2", LogJoinOperator.class);
     dag.addEdge(node21, node22);
     dag.addEdge(node22, node23);
     dag.addEdge(node23, leaf2);
     dag.addEdge(node22, node24);
     dag.addEdge(node24, leaf2);
 
-    DAGExecutor<LogicalNode> dagExecutor = new DAGExecutor<>(pool);
+    DAGExecutor<LogicalNode> dagExecutor = new DAGExecutor<>(threadPool);
     dagExecutor.execute(dag, new DAGConfig());
 
     // Check path 1
     {
       // Check not null
-      OperatorResult executionResult = dagExecutor.getNode(leaf1.getIdentifier()).getOperatorResult();
+      ExecutionResults executionResults = dagExecutor.getNode(leaf1.getIdentifier()).getExecutionResults();
+      Assert.assertNotNull(executionResults);
+
+      ExecutionResult executionResult = (ExecutionResult) executionResults.getResults().iterator().next();
       Assert.assertNotNull(executionResult);
       Assert.assertNotNull(executionResult.getResult());
       // Check whether execution order is correct
@@ -138,7 +148,10 @@ public class DAGExecutorTest {
     // Check path 2
     {
       // Check not null
-      OperatorResult executionResult = dagExecutor.getNode(leaf2.getIdentifier()).getOperatorResult();
+      ExecutionResults executionResults = dagExecutor.getNode(leaf2.getIdentifier()).getExecutionResults();
+      Assert.assertNotNull(executionResults);
+
+      ExecutionResult executionResult = (ExecutionResult) executionResults.getResults().iterator().next();
       Assert.assertNotNull(executionResult);
       Assert.assertNotNull(executionResult.getResult());
       // Check whether execution order is correct
@@ -166,8 +179,8 @@ public class DAGExecutorTest {
    * DAG:
    *           /---------> 12 -------------\
    *         /                              \
-   *       /    /---------> 23 ----------\   \
-   * root -> 22                           ------> leaf
+   *       /    /---------> 23 ------------\ \
+   * root -> 22                           -----> leaf
    *            \-> 24 --> 25 -----> 27 -/
    *                   \         /
    *                    \-> 26 -/
@@ -175,16 +188,16 @@ public class DAGExecutorTest {
   @Test
   public void testComplexGraphExecution() {
     DAG<LogicalNode> dag = new LogicalPlan();
-    LogicalNode root = new LogicalNode("root", ExecutionLogOperator.class);
-    LogicalNode leaf = new LogicalNode("leaf", ExecutionLogJoinOperator.class);
+    LogicalNode root = new LogicalNode("root", LogOperator.class);
+    LogicalNode leaf = new LogicalNode("leaf", LogJoinOperator.class);
 
     // sub-path 2
-    LogicalNode node22 = new LogicalNode("22", ExecutionLogOperator.class);
-    LogicalNode node23 = new LogicalNode("23", ExecutionLogOperator.class);
-    LogicalNode node24 = new LogicalNode("24", ExecutionLogOperator.class);
-    LogicalNode node25 = new LogicalNode("25", ExecutionLogOperator.class);
-    LogicalNode node26 = new LogicalNode("26", ExecutionLogOperator.class);
-    LogicalNode node27 = new LogicalNode("27", ExecutionLogJoinOperator.class);
+    LogicalNode node22 = new LogicalNode("22", LogOperator.class);
+    LogicalNode node23 = new LogicalNode("23", LogOperator.class);
+    LogicalNode node24 = new LogicalNode("24", LogOperator.class);
+    LogicalNode node25 = new LogicalNode("25", LogOperator.class);
+    LogicalNode node26 = new LogicalNode("26", LogOperator.class);
+    LogicalNode node27 = new LogicalNode("27", LogJoinOperator.class);
     dag.addEdge(root, node22);
     dag.addEdge(node22, node23);
     dag.addEdge(node22, node24);
@@ -196,15 +209,18 @@ public class DAGExecutorTest {
     dag.addEdge(node27, leaf);
 
     // sub-path 1
-    LogicalNode node12 = new LogicalNode("12", ExecutionLogOperator.class);
+    LogicalNode node12 = new LogicalNode("12", LogOperator.class);
     dag.addEdge(root, node12);
     dag.addEdge(node12, leaf);
 
-    DAGExecutor<LogicalNode> dagExecutor = new DAGExecutor<>(pool);
+    DAGExecutor<LogicalNode> dagExecutor = new DAGExecutor<>(threadPool);
     dagExecutor.execute(dag, new DAGConfig());
 
     // Check not null
-    OperatorResult executionResult = dagExecutor.getNode(leaf.getIdentifier()).getOperatorResult();
+    ExecutionResults executionResults = dagExecutor.getNode(leaf.getIdentifier()).getExecutionResults();
+    Assert.assertNotNull(executionResults);
+
+    ExecutionResult executionResult = (ExecutionResult) executionResults.getResults().iterator().next();
     Assert.assertNotNull(executionResult);
     Assert.assertNotNull(executionResult.getResult());
     // Check whether execution order is correct
@@ -250,19 +266,22 @@ public class DAGExecutorTest {
   @Test
   public void testFailedChainExecution() {
     DAG<LogicalNode> dag = new LogicalPlan();
-    LogicalNode node1 = new LogicalNode("1", ExecutionLogOperator.class);
+    LogicalNode node1 = new LogicalNode("1", LogOperator.class);
     LogicalNode node2 = new LogicalNode("2", FailedOperator.class);
-    LogicalNode node3 = new LogicalNode("3", ExecutionLogOperator.class);
+    LogicalNode node3 = new LogicalNode("3", LogOperator.class);
     dag.addEdge(node1, node2);
     dag.addEdge(node2, node3);
 
     DAGConfig dagConfig = new DAGConfig();
     dagConfig.setStopAtFailure(false);
-    DAGExecutor<LogicalNode> dagExecutor = new DAGExecutor<>(pool);
+    DAGExecutor<LogicalNode> dagExecutor = new DAGExecutor<>(threadPool);
     dagExecutor.execute(dag, dagConfig);
 
     // Check not null
-    OperatorResult executionResult = dagExecutor.getNode(node3.getIdentifier()).getOperatorResult();
+    ExecutionResults executionResults = dagExecutor.getNode(node3.getIdentifier()).getExecutionResults();
+    Assert.assertNotNull(executionResults);
+
+    ExecutionResult executionResult = (ExecutionResult) executionResults.getResults().iterator().next();
     Assert.assertNotNull(executionResult);
     Assert.assertNotNull(executionResult.getResult());
     // Check whether execution order is correct
@@ -280,8 +299,8 @@ public class DAGExecutorTest {
   /**
    * An operator that appends node name to a list, which is passed in from its incoming nodes.
    */
-  static class ExecutionLogOperator implements Operator {
-    private static final Logger LOG = LoggerFactory.getLogger(ExecutionLogOperator.class);
+  static class LogOperator implements Operator {
+    private static final Logger LOG = LoggerFactory.getLogger(LogOperator.class);
     private static final Random random = new Random();
 
     @Override
@@ -289,12 +308,12 @@ public class DAGExecutorTest {
     }
 
     @Override
-    public OperatorResult run(OperatorContext operatorContext) {
+    public ExecutionResult run(OperatorContext operatorContext) {
       LOG.info("Running node: {}", operatorContext.getNodeIdentifier().getName());
-      OperatorResult operatorResult = new OperatorResult();
-      Map<NodeIdentifier, OperatorResult> inputs = operatorContext.getInputs();
+      ExecutionResult executionResult = new ExecutionResult();
+      Map<NodeIdentifier, ExecutionResult> inputs = operatorContext.getInputs();
       List<String> executionLog = new ArrayList<>();
-      for (OperatorResult result : inputs.values()) {
+      for (ExecutionResult result : inputs.values()) {
         Object pResult = result.getResult();
         if (result.getResult() instanceof List) {
           List<String> list = (List<String>) pResult;
@@ -302,28 +321,28 @@ public class DAGExecutorTest {
         }
       }
       executionLog.add(operatorContext.getNodeIdentifier().getName());
-      operatorResult.setResult(executionLog);
-      return operatorResult;
+      executionResult.setResult(executionLog);
+      return executionResult;
     }
   }
 
   /**
    * An operator that joins lists from its incoming nodes and appends node name to the joined list.
    */
-  static class ExecutionLogJoinOperator implements Operator {
-    private static final Logger LOG = LoggerFactory.getLogger(ExecutionLogJoinOperator.class);
+  static class LogJoinOperator implements Operator {
+    private static final Logger LOG = LoggerFactory.getLogger(LogJoinOperator.class);
 
     @Override
     public void initialize(OperatorConfig operatorConfig) {
     }
 
     @Override
-    public OperatorResult run(OperatorContext operatorContext) {
+    public ExecutionResult run(OperatorContext operatorContext) {
       LOG.info("Running node: {}", operatorContext.getNodeIdentifier().getName());
-      OperatorResult operatorResult = new OperatorResult();
-      Map<NodeIdentifier, OperatorResult> inputs = operatorContext.getInputs();
+      ExecutionResult executionResult = new ExecutionResult();
+      Map<NodeIdentifier, ExecutionResult> inputs = operatorContext.getInputs();
       List<String> executionLog = new ArrayList<>();
-      for (OperatorResult result : inputs.values()) {
+      for (ExecutionResult result : inputs.values()) {
         Object pResult = result.getResult();
         if (result.getResult() instanceof List) {
           List<String> list = (List<String>) pResult;
@@ -335,8 +354,8 @@ public class DAGExecutorTest {
         }
       }
       executionLog.add(operatorContext.getNodeIdentifier().getName());
-      operatorResult.setResult(executionLog);
-      return operatorResult;
+      executionResult.setResult(executionLog);
+      return executionResult;
     }
   }
 
@@ -349,7 +368,7 @@ public class DAGExecutorTest {
     }
 
     @Override
-    public OperatorResult run(OperatorContext operatorContext) {
+    public ExecutionResult run(OperatorContext operatorContext) {
       throw new UnsupportedOperationException("Failed in purpose.");
     }
   }

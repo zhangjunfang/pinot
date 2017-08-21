@@ -1,8 +1,9 @@
 package com.linkedin.thirdeye.taskexecution.impl.dag;
 
+import com.linkedin.thirdeye.taskexecution.dag.ExecutionResult;
+import com.linkedin.thirdeye.taskexecution.dag.ExecutionResults;
 import com.linkedin.thirdeye.taskexecution.dag.FrameworkNode;
 import com.linkedin.thirdeye.taskexecution.dag.NodeIdentifier;
-import com.linkedin.thirdeye.taskexecution.operator.OperatorResult;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -28,7 +29,7 @@ public class LogicalNode extends FrameworkNode<LogicalNode> {
 
   @Override
   public void addIncomingNode(LogicalNode node) {
-    incomingEdge.add(node);;
+    incomingEdge.add(node);
   }
 
   @Override
@@ -72,13 +73,15 @@ public class LogicalNode extends FrameworkNode<LogicalNode> {
   }
 
   @Override
-  public OperatorResult getOperatorResult() {
+  public ExecutionResults getExecutionResults() {
+    ExecutionResults executionResults = new ExecutionResults();
     // Currently assume that there is only one operator runner
     if (CollectionUtils.isNotEmpty(logicalChildNode)) {
-      Iterator<FrameworkNode> iterator = logicalChildNode.iterator();
-      return iterator.next().getOperatorResult();
+      Iterator<FrameworkNode> operatorRunnerIte = logicalChildNode.iterator();
+      ExecutionResults operatorResult = operatorRunnerIte.next().getExecutionResults();
+      executionResults.addResults(operatorResult.getResults());
     }
-    return new OperatorResult();
+    return executionResults;
   }
 
   @Override
@@ -89,7 +92,11 @@ public class LogicalNode extends FrameworkNode<LogicalNode> {
     for (FrameworkNode pNode : this.getIncomingNodes()) {
       Collection<FrameworkNode> incomingNodes = pNode.getLogicalChildNode();
       for (FrameworkNode incomingNode : incomingNodes) {
-        runner.addIncomingNode((OperatorRunner) incomingNode);
+        Collection<ExecutionResult> executionResults = incomingNode.getExecutionResults().getResults();
+        if (executionResults.size() > 0) {
+          Iterator resultIte =executionResults.iterator();
+          runner.addIncomingExecutionResult(incomingNode.getIdentifier(), (ExecutionResult) resultIte.next());
+        }
       }
     }
     return runner.call();

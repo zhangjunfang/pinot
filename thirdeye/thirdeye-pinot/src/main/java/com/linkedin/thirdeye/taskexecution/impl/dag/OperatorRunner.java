@@ -1,15 +1,16 @@
 package com.linkedin.thirdeye.taskexecution.impl.dag;
 
+import com.linkedin.thirdeye.taskexecution.dag.ExecutionResult;
+import com.linkedin.thirdeye.taskexecution.dag.ExecutionResults;
 import com.linkedin.thirdeye.taskexecution.dag.FrameworkNode;
 import com.linkedin.thirdeye.taskexecution.dag.NodeIdentifier;
 import com.linkedin.thirdeye.taskexecution.operator.Operator;
 import com.linkedin.thirdeye.taskexecution.operator.OperatorConfig;
 import com.linkedin.thirdeye.taskexecution.operator.OperatorContext;
-import com.linkedin.thirdeye.taskexecution.operator.OperatorResult;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,10 +21,10 @@ class OperatorRunner extends FrameworkNode<OperatorRunner> {
   private NodeConfig nodeConfig = new NodeConfig();
   private Class operatorClass;
   private FrameworkNode logicalParentNode;
-  private Set<OperatorRunner> incomingOperatorRunners = new HashSet<>();
+  private Map<NodeIdentifier, ExecutionResult> incomingExecutionResultMap = new HashMap<>();
   // TODO: Change to OperatorResultReader, which could read result from a remote DB or logicalParentNode.
   private ExecutionStatus executionStatus = ExecutionStatus.RUNNING;
-  private OperatorResult operatorResult = new OperatorResult();
+  private ExecutionResult operatorResult = new ExecutionResult();
 
 
   public OperatorRunner(NodeIdentifier nodeIdentifier, NodeConfig nodeConfig, Class operatorClass) {
@@ -39,7 +40,11 @@ class OperatorRunner extends FrameworkNode<OperatorRunner> {
 
   @Override
   public void addIncomingNode(OperatorRunner incomingOperatorRunner) {
-    incomingOperatorRunners.add(incomingOperatorRunner);
+
+  }
+
+  public void addIncomingExecutionResult(NodeIdentifier nodeIdentifier, ExecutionResult executionResult) {
+    incomingExecutionResultMap.put(nodeIdentifier, executionResult);
   }
 
   @Override
@@ -49,7 +54,11 @@ class OperatorRunner extends FrameworkNode<OperatorRunner> {
 
   @Override
   public Collection<OperatorRunner> getIncomingNodes() {
-    return incomingOperatorRunners;
+    return null;
+  }
+
+  public Map<NodeIdentifier, ExecutionResult> getIncomingExecutionResultMap() {
+    return incomingExecutionResultMap;
   }
 
   @Override
@@ -78,8 +87,10 @@ class OperatorRunner extends FrameworkNode<OperatorRunner> {
   }
 
   @Override
-  public OperatorResult getOperatorResult() {
-    return operatorResult;
+  public ExecutionResults getExecutionResults() {
+    ExecutionResults executionResults = new ExecutionResults();
+    executionResults.addResult(operatorResult);
+    return executionResults;
   }
 
   /**
@@ -101,7 +112,7 @@ class OperatorRunner extends FrameworkNode<OperatorRunner> {
         try {
           OperatorConfig operatorConfig = convertNodeConfigToOperatorConfig(nodeConfig);
           Operator operator = initializeOperator(operatorClass, operatorConfig);
-          OperatorContext operatorContext = prepareInputOperatorContext(incomingOperatorRunners);
+          OperatorContext operatorContext = prepareInputOperatorContext(incomingExecutionResultMap);
           operatorResult = operator.run(operatorContext);
         } catch (Exception e) {
           if (i == numRetry) {
@@ -155,11 +166,11 @@ class OperatorRunner extends FrameworkNode<OperatorRunner> {
   }
 
   // TODO: Expand this method to consider partitioning
-  private OperatorContext prepareInputOperatorContext(Collection<OperatorRunner> incomingNodes) {
+  private OperatorContext prepareInputOperatorContext(Map<NodeIdentifier, ExecutionResult> incomingOperatorResults) {
     OperatorContext operatorContext = new OperatorContext();
     operatorContext.setNodeIdentifier(nodeIdentifier);
-    for (OperatorRunner incomingNode : incomingNodes) {
-      operatorContext.addOperatorResult(incomingNode.getIdentifier(), incomingNode.getOperatorResult());
+    for (Map.Entry<NodeIdentifier, ExecutionResult> nodeOperatorResultEntry : incomingOperatorResults.entrySet()) {
+      operatorContext.addResult(nodeOperatorResultEntry.getKey(), nodeOperatorResultEntry.getValue());
     }
     return operatorContext;
   }

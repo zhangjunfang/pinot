@@ -1,10 +1,10 @@
 package com.linkedin.thirdeye.taskexecution.impl.dag;
 
+import com.linkedin.thirdeye.taskexecution.dag.ExecutionResult;
 import com.linkedin.thirdeye.taskexecution.dag.NodeIdentifier;
 import com.linkedin.thirdeye.taskexecution.operator.Operator;
 import com.linkedin.thirdeye.taskexecution.operator.OperatorConfig;
 import com.linkedin.thirdeye.taskexecution.operator.OperatorContext;
-import com.linkedin.thirdeye.taskexecution.operator.OperatorResult;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -56,8 +56,8 @@ public class OperatorRunnerTest {
     }
 
     @Override
-    public OperatorResult run(OperatorContext operatorContext) {
-      return new OperatorResult();
+    public ExecutionResult run(OperatorContext operatorContext) {
+      return new ExecutionResult();
     }
   }
 
@@ -67,7 +67,7 @@ public class OperatorRunnerTest {
     }
 
     @Override
-    public OperatorResult run(OperatorContext operatorContext) {
+    public ExecutionResult run(OperatorContext operatorContext) {
       throw new UnsupportedOperationException("Failed in purpose.");
     }
   }

@@ -2,7 +2,6 @@ package com.linkedin.thirdeye.taskexecution.dag;
 
 import com.linkedin.thirdeye.taskexecution.impl.dag.ExecutionStatus;
 import com.linkedin.thirdeye.taskexecution.impl.dag.NodeConfig;
-import com.linkedin.thirdeye.taskexecution.operator.OperatorResult;
 import java.util.Collection;
 import java.util.concurrent.Callable;
 
@@ -29,7 +28,7 @@ public interface Node<T extends Node> extends Callable<NodeIdentifier> {
 
   ExecutionStatus getExecutionStatus();
 
-  OperatorResult getOperatorResult();
+  ExecutionResults getExecutionResults();
 
   @Override
   NodeIdentifier call() throws Exception;
