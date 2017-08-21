@@ -2,7 +2,7 @@ package com.linkedin.thirdeye.taskexecution.dag;
 
 import java.util.Collection;
 
-public abstract class FrameworkDAG<T extends FrameworkNode> implements DAG<T> {
+public abstract class FrameworkDAG<T extends AbstractLogicalNode> implements DAG<T> {
 
   public abstract T addNode(T node);
 

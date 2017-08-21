@@ -1,5 +1,6 @@
 package com.linkedin.thirdeye.taskexecution.impl.dag;
 
+import com.linkedin.thirdeye.taskexecution.dag.AbstractLogicalNode;
 import com.linkedin.thirdeye.taskexecution.dag.DAG;
 import com.linkedin.thirdeye.taskexecution.dag.Node;
 import com.linkedin.thirdeye.taskexecution.dag.NodeIdentifier;
@@ -19,7 +20,7 @@ import org.slf4j.LoggerFactory;
  * service. An executor takes care of only logical execution (control flow). The physical execution is done by
  * OperatorRunner, which could be executed on other machines.
  */
-public class DAGExecutor<T extends Node<T>> {
+public class DAGExecutor<T extends AbstractLogicalNode<T>> {
   private static final Logger LOG = LoggerFactory.getLogger(DAGExecutor.class);
   private ExecutorCompletionService<NodeIdentifier> executorCompletionService;
 

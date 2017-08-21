@@ -1,11 +1,8 @@
 package com.linkedin.thirdeye.taskexecution.dag;
 
-import com.linkedin.thirdeye.taskexecution.impl.dag.ExecutionStatus;
-import com.linkedin.thirdeye.taskexecution.impl.dag.NodeConfig;
 import java.util.Collection;
-import java.util.concurrent.Callable;
 
-public interface Node<T extends Node> extends Callable<NodeIdentifier> {
+public interface Node<T extends Node> {
 
   NodeIdentifier getIdentifier();
 
@@ -18,18 +15,4 @@ public interface Node<T extends Node> extends Callable<NodeIdentifier> {
 
   Collection<T> getOutgoingNodes();
 
-
-  //// Execution Related Methods ////
-  Class getOperatorClass();
-
-  void setNodeConfig(NodeConfig nodeConfig);
-
-  NodeConfig getNodeConfig();
-
-  ExecutionStatus getExecutionStatus();
-
-  ExecutionResults getExecutionResults();
-
-  @Override
-  NodeIdentifier call() throws Exception;
 }

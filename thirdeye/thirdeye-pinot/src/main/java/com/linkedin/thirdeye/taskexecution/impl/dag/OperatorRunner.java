@@ -38,37 +38,12 @@ class OperatorRunner extends FrameworkNode<OperatorRunner> {
     this.logicalParentNode = logicalParentNode;
   }
 
-  @Override
-  public void addIncomingNode(OperatorRunner incomingOperatorRunner) {
-
-  }
-
   public void addIncomingExecutionResult(NodeIdentifier nodeIdentifier, ExecutionResult executionResult) {
     incomingExecutionResultMap.put(nodeIdentifier, executionResult);
   }
 
-  @Override
-  public void addOutgoingNode(OperatorRunner node) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public Collection<OperatorRunner> getIncomingNodes() {
-    return null;
-  }
-
   public Map<NodeIdentifier, ExecutionResult> getIncomingExecutionResultMap() {
     return incomingExecutionResultMap;
-  }
-
-  @Override
-  public Collection<OperatorRunner> getOutgoingNodes() {
-    return Collections.emptyList();
-  }
-
-  @Override
-  public Class getOperatorClass() {
-    return operatorClass;
   }
 
   @Override
@@ -130,12 +105,12 @@ class OperatorRunner extends FrameworkNode<OperatorRunner> {
   }
 
   @Override
-  public FrameworkNode getLogicalParentNode() {
+  public FrameworkNode getLogicalNode() {
     return logicalParentNode;
   }
 
   @Override
-  public Collection<FrameworkNode> getLogicalChildNode() {
+  public Collection<FrameworkNode> getPhysicalNode() {
     return Collections.EMPTY_LIST;
   }
 

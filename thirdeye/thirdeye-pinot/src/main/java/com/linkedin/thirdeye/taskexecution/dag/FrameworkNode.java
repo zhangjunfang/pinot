@@ -1,6 +1,9 @@
 package com.linkedin.thirdeye.taskexecution.dag;
 
+import com.linkedin.thirdeye.taskexecution.impl.dag.ExecutionStatus;
+import com.linkedin.thirdeye.taskexecution.impl.dag.NodeConfig;
 import java.util.Collection;
+import java.util.concurrent.Callable;
 
 /**
  * Execution Framework Related Nodes. The difference between {@link Node} and FrameworkNode is that Node defines the
@@ -28,10 +31,19 @@ import java.util.Collection;
  *
  * @param <T> the type that extends this interface.
  */
-public abstract class FrameworkNode<T extends FrameworkNode> implements Node<T> {
+public abstract class FrameworkNode<T extends FrameworkNode> implements Callable<NodeIdentifier> {
   protected NodeIdentifier nodeIdentifier = new NodeIdentifier();
+  protected Class operatorClass;
+  protected NodeConfig nodeConfig = new NodeConfig();
 
-  @Override
+  protected FrameworkNode() {
+  }
+
+  protected FrameworkNode(NodeIdentifier nodeIdentifier, Class operatorClass) {
+    this.nodeIdentifier = nodeIdentifier;
+    this.operatorClass = operatorClass;
+  }
+
   public NodeIdentifier getIdentifier() {
     return nodeIdentifier;
   }
@@ -40,9 +52,29 @@ public abstract class FrameworkNode<T extends FrameworkNode> implements Node<T> 
     this.nodeIdentifier = nodeIdentifier;
   }
 
-  abstract public FrameworkNode getLogicalParentNode();
+  public Class getOperatorClass() {
+    return operatorClass;
+  }
 
-  abstract public Collection<FrameworkNode> getLogicalChildNode();
+  public void setOperatorClass(Class operatorClass) {
+    this.operatorClass = operatorClass;
+  }
+
+  public void setNodeConfig(NodeConfig nodeConfig) {
+    this.nodeConfig = nodeConfig;
+  }
+
+  public NodeConfig getNodeConfig() {
+    return nodeConfig;
+  }
+
+  public abstract FrameworkNode<T> getLogicalNode();
+
+  public abstract Collection<FrameworkNode> getPhysicalNode();
+
+  public abstract ExecutionStatus getExecutionStatus();
+
+  public abstract ExecutionResults getExecutionResults();
 
   @Override
   public int hashCode() {
