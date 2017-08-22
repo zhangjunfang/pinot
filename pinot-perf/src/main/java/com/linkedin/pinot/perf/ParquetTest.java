@@ -53,6 +53,7 @@ import java.util.Set;
 import me.lemire.integercompression.BitPacking;
 
 import org.apache.commons.configuration.Configuration;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.http.nio.util.DirectByteBufferAllocator;
@@ -67,7 +68,8 @@ import org.apache.parquet.hadoop.ParquetFileWriter;
 public class ParquetTest {
   static int MAX_RUNS = 10;
 
-  public static void singleValuedReadBenchMarkV1(PinotDataBuffer pinotDataBuffer, int numDocs, int columnSizeInBits, String column)
+  public static void singleValuedReadBenchMarkV1(PinotDataBuffer pinotDataBuffer, int numDocs, int columnSizeInBits,
+      String column, String outputDir)
       throws Exception {
 
     boolean signed = false;
@@ -81,10 +83,10 @@ public class ParquetTest {
     final int PAGE_SIZE = 20000;
     final int valsPerPage = 100 ;
     long parquetFileSize = 0;
-    String outputFileName = "/tmp/rle/" + column+ ".rle";
-    String outputFileName1 = "/tmp/rle/" + column + ".data";
-    String outputFileName2 = "/tmp/rle/" + column + ".orig";
-    String outputFileName3 = "/tmp/rle/" + column + ".new";
+    String outputFileName = outputDir + column+ ".rle";
+    String outputFileName1 = outputDir + column + ".data";
+    String outputFileName2 = outputDir + column + ".orig";
+    String outputFileName3 = outputDir + column + ".new";
     FileOutputStream outputFile = new FileOutputStream(outputFileName);
     PrintWriter outputFile1 = new PrintWriter(outputFileName1, "UTF-8");
     PrintWriter outputFile2 = new PrintWriter(outputFileName2, "UTF-8");
@@ -121,30 +123,30 @@ public class ParquetTest {
     outputFile3.close();
     FieldSpec spec = new DimensionFieldSpec(column, FieldSpec.DataType.INT, true);
 
-    RLEForwardIndexCreator prle = new RLEForwardIndexCreator(new File("/tmp/rle"),
+    RLEForwardIndexCreator prle = new RLEForwardIndexCreator(new File(outputDir),
         columnSizeInBits, spec, numRuns, numDocs);
-    RLEBitForwardIndexCreator prle2 =
-        new RLEBitForwardIndexCreator(new File("/tmp/rle"), (1<<columnSizeInBits) -1, spec, numRuns, numDocs);
+    //RLEBitForwardIndexCreator prle2 =
+    //    new RLEBitForwardIndexCreator(new File(outputDir), (1<<columnSizeInBits) -1, spec, numRuns, numDocs);
     reader =
         new com.linkedin.pinot.core.io.reader.impl.v1.FixedBitSingleValueReader(pinotDataBuffer, numDocs,
             columnSizeInBits, signed);
     for (int i = 0; i < numDocs; i++) {
       int v = reader.getInt(i);
       prle.add(v,i);
-      prle2.add(v,i);
+      //prle2.add(v,i);
     }
     prle.seal();
-    prle2.seal();
+    //prle2.seal();
 
-    File rleFile = new File("/tmp/rle/", column + ".rle1");
+    File rleFile = new File(outputDir, column + ".rle1");
     PinotDataBuffer buffer = PinotDataBuffer.fromFile(rleFile, ReadMode.mmap, FileChannel.MapMode.READ_ONLY, "rle1_read");
     FixedByteSingleValueMultiColReader rawFileReader = new FixedByteSingleValueMultiColReader(buffer, numRuns, new int[] {4, 4});
-    File bkmFile = new File("/tmp/rle/", column + ".book1");
+    File bkmFile = new File(outputDir, column + ".book1");
     PinotDataBuffer buffer1 = PinotDataBuffer.fromFile(bkmFile, ReadMode.mmap, FileChannel.MapMode.READ_ONLY, "book1_read");
     FixedByteSingleValueMultiColReader bookmarkFileReader = new FixedByteSingleValueMultiColReader(buffer1, numRuns/128, new int[] {4});
     RLEForwardIndexReader rle1_reader = new RLEForwardIndexReader(rawFileReader, bookmarkFileReader, numDocs/numRuns*128, numDocs);
 
-    outputFileName3 = "/tmp/rle/" + column + ".rle1_read";
+    outputFileName3 = outputDir + column + ".rle1_read";
     outputFile3 = new PrintWriter(outputFileName3, "UTF-8");
     for (int i = 0; i < numDocs; i++) {
       int v = rle1_reader.getInt(i);
@@ -152,7 +154,7 @@ public class ParquetTest {
     }
     outputFile3.close();
 
-    outputFileName3 = "/tmp/rle/" + column + ".rle1_scan";
+    outputFileName3 = outputDir + column + ".rle1_scan";
     outputFile3 = new PrintWriter(outputFileName3, "UTF-8");
     RLEValueReaderContext context = rle1_reader.createContext();
     for (int i = 0; i < numDocs; i++) {
@@ -166,43 +168,41 @@ public class ParquetTest {
     }
     outputFile3.close();
 
-    File rleFile2 = new File("/tmp/rle/", column + ".rle2");
-    PinotDataBuffer buffer2 = PinotDataBuffer.fromFile(rleFile2, ReadMode.mmap, FileChannel.MapMode.READ_ONLY, "rle2_read");
-    FixedBitSingleValueMultiColReader rawFileReader2 = new FixedBitSingleValueMultiColReader(buffer2, numRuns+1, 2,
-        new int[] {columnSizeInBits, RLEBitForwardIndexCreator.getNumOfBits(numDocs)});
-    File bkmFile2 = new File("/tmp/rle/", column + ".book2");
-    PinotDataBuffer buffer3 = PinotDataBuffer.fromFile(bkmFile2, ReadMode.mmap, FileChannel.MapMode.READ_ONLY, "book2_read");
-    FixedBitSingleValueMultiColReader bookmarkFileReader2 = new FixedBitSingleValueMultiColReader(buffer3, numRuns/128,
-        1, new int[] {RLEBitForwardIndexCreator.getNumOfBits(numRuns+1)});
-    RLEBitForwardIndexReader rle2_reader = new RLEBitForwardIndexReader(rawFileReader2, bookmarkFileReader2, numDocs/numRuns*128, numDocs);
+    //File rleFile2 = new File(outputDir, column + ".rle2");
+    //PinotDataBuffer buffer2 = PinotDataBuffer.fromFile(rleFile2, ReadMode.mmap, FileChannel.MapMode.READ_ONLY, "rle2_read");
+    //FixedBitSingleValueMultiColReader rawFileReader2 = new FixedBitSingleValueMultiColReader(buffer2, numRuns+1, 2,
+    //    new int[] {columnSizeInBits, RLEBitForwardIndexCreator.getNumOfBits(numDocs)});
+    //File bkmFile2 = new File(outputDir, column + ".book2");
+    //PinotDataBuffer buffer3 = PinotDataBuffer.fromFile(bkmFile2, ReadMode.mmap, FileChannel.MapMode.READ_ONLY, "book2_read");
+    //FixedBitSingleValueMultiColReader bookmarkFileReader2 = new FixedBitSingleValueMultiColReader(buffer3, numRuns/128,
+    //    1, new int[] {RLEBitForwardIndexCreator.getNumOfBits(numRuns+1)});
+    //RLEBitForwardIndexReader rle2_reader = new RLEBitForwardIndexReader(rawFileReader2, bookmarkFileReader2, numDocs/numRuns*128, numDocs);
 
-    outputFileName3 = "/tmp/rle/" + column + ".rle2_read";
-    outputFile3 = new PrintWriter(outputFileName3, "UTF-8");
-    for (int i = 0; i < numDocs; i++) {
-      int v = rle2_reader.getInt(i);
-      outputFile3.println(v);
-    }
-    outputFile3.close();
+    //outputFileName3 = outputDir + column + ".rle2_read";
+    //outputFile3 = new PrintWriter(outputFileName3, "UTF-8");
+    //for (int i = 0; i < numDocs; i++) {
+    //  int v = rle2_reader.getInt(i);
+    //  outputFile3.println(v);
+    //}
+    //outputFile3.close();
 
-    //rle2_reader.close();
-    //rle2_reader = new RLEBitForwardIndexReader(rawFileReader2, bookmarkFileReader2, numDocs/numRuns*128, numDocs);
-    outputFileName3 = "/tmp/rle/" + column + ".rle2_scan";
-    outputFile3 = new PrintWriter(outputFileName3, "UTF-8");
-    context = rle2_reader.createContext();
-    for (int i = 0; i < numDocs; i++) {
-      int v = 0;
-      try {
-      v = rle2_reader.getInt(i, context);
-      } catch (Exception e) {
-        System.out.println("Exception " + e);
-      }
-      int v1 = rle2_reader.getInt(i);
-      if (v != v1) {
-        System.out.println("Difference between " + v + " " + v1 + "for " + i + " th row" );
-      }
-      outputFile3.println(v);
-    }
-    outputFile3.close();
+    //outputFileName3 = outputDir + column + ".rle2_scan";
+    //outputFile3 = new PrintWriter(outputFileName3, "UTF-8");
+    //context = rle2_reader.createContext();
+    //for (int i = 0; i < numDocs; i++) {
+    //  int v = 0;
+    //  try {
+    //  v = rle2_reader.getInt(i, context);
+    //  } catch (Exception e) {
+    //    System.out.println("Exception " + e);
+    //  }
+    //  int v1 = rle2_reader.getInt(i);
+    //  if (v != v1) {
+    //    System.out.println("Difference between " + v + " " + v1 + "for " + i + " th row" );
+    //  }
+    //  outputFile3.println(v);
+    //}
+    //outputFile3.close();
 
     final long randomSeed = 123456789L;
     final int MAX_DOC = 100000;
@@ -271,6 +271,12 @@ public class ParquetTest {
         stats.toString().replaceAll("\n", ", ") + " raw:" + Arrays.toString(stats.getValues()));
     reader.close();
     pinotDataBuffer.close();
+
+    FileUtils.deleteQuietly(new File(outputDir, column + ".data"));
+    FileUtils.deleteQuietly(new File(outputDir, column + ".new"));
+    FileUtils.deleteQuietly(new File(outputDir, column + ".orig"));
+    FileUtils.deleteQuietly(new File(outputDir, column + ".rle1_read"));
+    FileUtils.deleteQuietly(new File(outputDir, column + ".rle1_scan"));
   }
 
   public static void singleValuedReadBenchMarkV2(File file, int numDocs, int numBits)
@@ -285,11 +291,11 @@ public class ParquetTest {
       int maxEntriesPerDoc, int columnSizeInBits) throws Exception {
   }
 
-  private static void benchmarkForwardIndex(String indexDir) throws Exception {
-    benchmarkForwardIndex(indexDir, null);
+  private static void benchmarkForwardIndex(String indexDir, String outputDir) throws Exception {
+    benchmarkForwardIndex(indexDir, outputDir, null);
   }
 
-  private static void benchmarkForwardIndex(String indexDir, List<String> includeColumns)
+  private static void benchmarkForwardIndex(String indexDir, String outputDir, List<String> includeColumns)
       throws Exception {
     SegmentMetadataImpl segmentMetadata = new SegmentMetadataImpl(new File(indexDir));
     String segmentVersion = segmentMetadata.getVersion();
@@ -311,15 +317,15 @@ public class ParquetTest {
         //File fwdIndexFile = new File(indexDir, fwdIndexFileName);
         PinotDataBuffer fwdIndexBuffer = reader.getIndexFor(column, ColumnIndexType.FORWARD_INDEX);
         singleValuedReadBenchMark(segmentVersion, fwdIndexBuffer, segmentMetadata.getTotalDocs(),
-            columnMetadata.getBitsPerElement(), column);
+            columnMetadata.getBitsPerElement(), column, outputDir);
       }
     }
   }
 
   private static void singleValuedReadBenchMark(String segmentVersion, PinotDataBuffer pinotDataBuffer,
-      int totalDocs, int bitsPerElement, String column) throws Exception {
+      int totalDocs, int bitsPerElement, String column, String outputDir) throws Exception {
     //if (SegmentVersion.v1.name().equals(segmentVersion)) {
-      singleValuedReadBenchMarkV1(pinotDataBuffer, totalDocs, bitsPerElement, column);
+      singleValuedReadBenchMarkV1(pinotDataBuffer, totalDocs, bitsPerElement, column, outputDir);
     //} else if (SegmentVersion.v2.name().equals(segmentVersion)) {
     //  singleValuedReadBenchMarkV2(pinotDataBuffer, totalDocs, bitsPerElement);
     //}
@@ -332,11 +338,12 @@ public class ParquetTest {
    */
   public static void main(String[] args) throws Exception {
     String indexDir = args[0];
-    if (args.length == 1) {
-      benchmarkForwardIndex(indexDir);
-    }
+    String outputDir = args[1];
     if (args.length == 2) {
-      benchmarkForwardIndex(indexDir, Lists.newArrayList(args[1].trim().split(",")));
+      benchmarkForwardIndex(indexDir, outputDir);
+    }
+    if (args.length == 3) {
+      benchmarkForwardIndex(indexDir, outputDir, Lists.newArrayList(args[1].trim().split(",")));
     }
   }
 

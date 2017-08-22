@@ -106,6 +106,18 @@
               <mainClass>com.linkedin.pinot.perf.PerfBenchmarkRunner</mainClass>
               <name>pinot-perfBenchmarkRunner</name>
             </program>
+            <program>
+              <mainClass>com.linkedin.pinot.perf.ParquetTest</mainClass>
+              <name>pinot-parquetTest</name>
+              <jvmSettings>
+                <initialMemorySize>10G</initialMemorySize>
+                <maxMemorySize>30G</maxMemorySize>
+                <extraArguments>
+                  <extraArgument>-XX:MaxDirectMemorySize=30g</extraArgument>
+                  <extraArgument>-Dlog4j.configuration=conf/pinot-tools-log4j.properties</extraArgument>
+                </extraArguments>
+              </jvmSettings>
+            </program>
           </programs>
           <binFileExtensions>
             <unix>.sh</unix>
