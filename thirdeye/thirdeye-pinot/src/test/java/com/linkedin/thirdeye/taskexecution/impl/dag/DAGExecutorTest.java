@@ -337,11 +337,14 @@ public class DAGExecutorTest {
     List<ExecutionResult> finalResultList = executionResults.getResult("");
     Assert.assertTrue(CollectionUtils.isNotEmpty(finalResultList));
     Assert.assertEquals(finalResultList.size(), 1);
+
     ExecutionResult finalResult = finalResultList.get(0);
     Assert.assertNotNull(finalResult);
     Assert.assertNotNull(finalResult.getResult());
-    // Check whether execution order is correct
-    return (List<String>) finalResult.getResult();
+
+    List<String> result = (List<String>) finalResult.getResult();
+    Assert.assertNotNull(result);
+    return result;
   }
 
   /**
