@@ -4,7 +4,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-public abstract class AbstractLogicalNode<T extends AbstractLogicalNode> extends FrameworkNode<T> implements Node<T> {
+public abstract class AbstractLogicalNode<T extends AbstractLogicalNode> extends FrameworkNode implements Node<T> {
 
   private Set<T> incomingEdge = new HashSet<>();
   private Set<T> outgoingEdge = new HashSet<>();

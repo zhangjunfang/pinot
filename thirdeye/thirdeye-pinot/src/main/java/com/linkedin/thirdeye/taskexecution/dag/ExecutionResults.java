@@ -1,14 +1,17 @@
 package com.linkedin.thirdeye.taskexecution.dag;
 
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
-public class ExecutionResults<T> {
+public class ExecutionResults<K, V> {
   private NodeIdentifier nodeIdentifier;
-  private List<ExecutionResult<T>> results = new ArrayList<>();
+  private Map<K, List<ExecutionResult<K, V>>> results = new HashMap<>();
 
-  public void setNodeIdentifier(NodeIdentifier nodeIdentifier) {
+  public ExecutionResults(NodeIdentifier nodeIdentifier) {
     this.nodeIdentifier = nodeIdentifier;
   }
 
@@ -16,21 +19,46 @@ public class ExecutionResults<T> {
     return nodeIdentifier;
   }
 
-  public Collection<ExecutionResult<T>> getResults() {
-    return results;
+  public void setNodeIdentifier(NodeIdentifier nodeIdentifier) {
+    this.nodeIdentifier = nodeIdentifier;
   }
 
-  public void setResults(Collection<ExecutionResult<T>> results) {
-    this.results = new ArrayList<>(results);
-    this.results.addAll(results);
+  /**
+   * Adds execution results to the result map. The key and value are retrieved from the execution result directly.
+   *
+   * @param executionResult the execution result to be added.
+   */
+  public void addResult(ExecutionResult<K, V> executionResult) {
+    K key = executionResult.getKey();
+    List<ExecutionResult<K, V>> resultList = results.get(key);
+    if (resultList == null) {
+      resultList = new ArrayList<>();
+      results.put(key, resultList);
+    }
+    resultList.add(executionResult);
   }
 
-  public void addResult(ExecutionResult<T> result) {
-    this.results.add(result);
+  /**
+   * Returns a list of {@link ExecutionResult} that are associated with the given key.
+   *
+   * @param key the key to look up the execution results.
+   *
+   * @return an empty list if no execution results is associated with the the given key.
+   */
+  public List<ExecutionResult<K, V>> getResult(K key) {
+    if (results.containsKey(key)) {
+      return results.get(key);
+    } else {
+      return Collections.emptyList();
+    }
   }
 
-  public void addResults(Collection<ExecutionResult<T>> results) {
-    this.results.addAll(results);
+  /**
+   * Returns the key set of the result map.
+   *
+   * @return the key set of the result map.
+   */
+  public Set<K> keySet() {
+    return results.keySet();
   }
-
 }

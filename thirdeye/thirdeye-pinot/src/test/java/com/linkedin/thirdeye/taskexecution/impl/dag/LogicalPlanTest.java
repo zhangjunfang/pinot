@@ -2,6 +2,7 @@ package com.linkedin.thirdeye.taskexecution.impl.dag;
 
 import com.linkedin.thirdeye.taskexecution.dag.DAG;
 import com.linkedin.thirdeye.taskexecution.dag.ExecutionResult;
+import com.linkedin.thirdeye.taskexecution.dag.OperatorResult;
 import com.linkedin.thirdeye.taskexecution.operator.Operator;
 import com.linkedin.thirdeye.taskexecution.operator.OperatorConfig;
 import com.linkedin.thirdeye.taskexecution.operator.OperatorContext;

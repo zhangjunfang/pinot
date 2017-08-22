@@ -1,5 +1,6 @@
 package com.linkedin.thirdeye.taskexecution.dag;
 
+import java.util.List;
 import java.util.Map;
 
 public interface ExecutionContext<T extends ExecutionResult> {
@@ -8,8 +9,8 @@ public interface ExecutionContext<T extends ExecutionResult> {
 
   void setNodeIdentifier(NodeIdentifier nodeIdentifier);
 
-  Map<NodeIdentifier, ? extends ExecutionResult> getInputs();
+  Map<NodeIdentifier, List<T>> getInputs();
 
-  void addResult(NodeIdentifier identifier, T result);
+  void addResult(NodeIdentifier identifier, List<T> result);
 
 }

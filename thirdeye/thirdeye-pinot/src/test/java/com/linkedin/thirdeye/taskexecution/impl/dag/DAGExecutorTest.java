@@ -16,6 +16,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.Assert;
@@ -41,21 +42,11 @@ public class DAGExecutorTest {
     dagConfig.setStopAtFailure(true);
     dagExecutor.execute(dag, dagConfig);
 
-    // Check not null
-    ExecutionResults executionResults = dagExecutor.getNode(root.getIdentifier()).getExecutionResults();
-    Assert.assertNotNull(executionResults);
-
-    ExecutionResult executionResult = (ExecutionResult) executionResults.getResults().iterator().next();
-    Assert.assertNotNull(executionResult);
-    Assert.assertNotNull(executionResult.getResult());
-    // Check whether execution order is correct
-    List<String> result = (List<String>) executionResult.getResult();
-    List<String> expectedResult = new ArrayList<String>() {{
+    List<String> executionLog = checkAndGetFinalResult(dagExecutor.getNode(root.getIdentifier()).getExecutionResults());
+    List<String> expectedLog = new ArrayList<String>() {{
       add("root");
     }};
-    for (int i = 0; i < expectedResult.size(); i++) {
-      Assert.assertEquals(result.get(i), expectedResult.get(i));
-    }
+    Assert.assertEquals(executionLog, expectedLog);
   }
 
   /**
@@ -73,16 +64,9 @@ public class DAGExecutorTest {
     DAGExecutor<LogicalNode> dagExecutor = new DAGExecutor<>(threadPool);
     dagExecutor.execute(dag, new DAGConfig());
 
-    // Check not null
-    ExecutionResults executionResults = dagExecutor.getNode(node3.getIdentifier()).getExecutionResults();
-    Assert.assertNotNull(executionResults);
+    // TODO: Check dagExecutor's execution status
 
-    ExecutionResult executionResult = (ExecutionResult) executionResults.getResults().iterator().next();
-    Assert.assertNotNull(executionResult);
-    Assert.assertNotNull(executionResult.getResult());
-    // Check whether execution order is correct
-    List<String> executionLog = (List<String>) executionResult.getResult();
-
+    List<String> executionLog = checkAndGetFinalResult(dagExecutor.getNode(node3.getIdentifier()).getExecutionResults());
     List<String> expectedResult = new ArrayList<String>() {{
       add("1");
       add("2");
@@ -91,7 +75,7 @@ public class DAGExecutorTest {
     List<List<String>> expectedResults = new ArrayList<>();
     expectedResults.add(expectedResult);
 
-    Assert.assertTrue(checkLinearizability(expectedResults, executionLog));
+    Assert.assertTrue(checkLinearizability(executionLog, expectedResults));
   }
 
   /**
@@ -127,15 +111,7 @@ public class DAGExecutorTest {
 
     // Check path 1
     {
-      // Check not null
-      ExecutionResults executionResults = dagExecutor.getNode(leaf1.getIdentifier()).getExecutionResults();
-      Assert.assertNotNull(executionResults);
-
-      ExecutionResult executionResult = (ExecutionResult) executionResults.getResults().iterator().next();
-      Assert.assertNotNull(executionResult);
-      Assert.assertNotNull(executionResult.getResult());
-      // Check whether execution order is correct
-      List<String> executionLog1 = (List<String>) executionResult.getResult();
+      List<String> executionLog = checkAndGetFinalResult(dagExecutor.getNode(leaf1.getIdentifier()).getExecutionResults());
       List<String> expectedResult = new ArrayList<String>() {{
         add("root1");
         add("node12");
@@ -143,19 +119,11 @@ public class DAGExecutorTest {
       }};
       List<List<String>> expectedResults = new ArrayList<>();
       expectedResults.add(expectedResult);
-      Assert.assertTrue(checkLinearizability(expectedResults, executionLog1));
+      Assert.assertTrue(checkLinearizability(executionLog, expectedResults));
     }
     // Check path 2
     {
-      // Check not null
-      ExecutionResults executionResults = dagExecutor.getNode(leaf2.getIdentifier()).getExecutionResults();
-      Assert.assertNotNull(executionResults);
-
-      ExecutionResult executionResult = (ExecutionResult) executionResults.getResults().iterator().next();
-      Assert.assertNotNull(executionResult);
-      Assert.assertNotNull(executionResult.getResult());
-      // Check whether execution order is correct
-      List<String> executionLog2 = (List<String>) executionResult.getResult();
+      List<String> executionLog = checkAndGetFinalResult(dagExecutor.getNode(leaf2.getIdentifier()).getExecutionResults());
       List<String> expectedResult1 = new ArrayList<String>() {{
         add("root2");
         add("node22");
@@ -171,7 +139,7 @@ public class DAGExecutorTest {
       List<List<String>> expectedResults = new ArrayList<>();
       expectedResults.add(expectedResult1);
       expectedResults.add(expectedResult2);
-      Assert.assertTrue(checkLinearizability(expectedResults, executionLog2));
+      Assert.assertTrue(checkLinearizability(executionLog, expectedResults));
     }
   }
 
@@ -216,15 +184,7 @@ public class DAGExecutorTest {
     DAGExecutor<LogicalNode> dagExecutor = new DAGExecutor<>(threadPool);
     dagExecutor.execute(dag, new DAGConfig());
 
-    // Check not null
-    ExecutionResults executionResults = dagExecutor.getNode(leaf.getIdentifier()).getExecutionResults();
-    Assert.assertNotNull(executionResults);
-
-    ExecutionResult executionResult = (ExecutionResult) executionResults.getResults().iterator().next();
-    Assert.assertNotNull(executionResult);
-    Assert.assertNotNull(executionResult.getResult());
-    // Check whether execution order is correct
-    List<String> result = (List<String>) executionResult.getResult();
+    List<String> executionLog = checkAndGetFinalResult(dagExecutor.getNode(leaf.getIdentifier()).getExecutionResults());
     List<String> expectedOrder1 = new ArrayList<String>() {{
       add("root");
       add("12");
@@ -257,7 +217,7 @@ public class DAGExecutorTest {
     expectedOrders.add(expectedOrder2);
     expectedOrders.add(expectedOrder3);
     expectedOrders.add(expectedOrder4);
-    Assert.assertTrue(checkLinearizability(expectedOrders, result));
+    Assert.assertTrue(checkLinearizability(executionLog, expectedOrders));
   }
 
   /**
@@ -277,23 +237,14 @@ public class DAGExecutorTest {
     DAGExecutor<LogicalNode> dagExecutor = new DAGExecutor<>(threadPool);
     dagExecutor.execute(dag, dagConfig);
 
-    // Check not null
-    ExecutionResults executionResults = dagExecutor.getNode(node3.getIdentifier()).getExecutionResults();
-    Assert.assertNotNull(executionResults);
-
-    ExecutionResult executionResult = (ExecutionResult) executionResults.getResults().iterator().next();
-    Assert.assertNotNull(executionResult);
-    Assert.assertNotNull(executionResult.getResult());
-    // Check whether execution order is correct
-    List<String> executionLog = (List<String>) executionResult.getResult();
-
+    List<String> executionLog = checkAndGetFinalResult(dagExecutor.getNode(node3.getIdentifier()).getExecutionResults());
     List<String> expectedResult = new ArrayList<String>() {{
       add("3");
     }};
     List<List<String>> expectedResults = new ArrayList<>();
     expectedResults.add(expectedResult);
 
-    Assert.assertTrue(checkLinearizability(expectedResults, executionLog));
+    Assert.assertTrue(checkLinearizability(executionLog, expectedResults));
   }
 
   /**
@@ -310,19 +261,19 @@ public class DAGExecutorTest {
     @Override
     public ExecutionResult run(OperatorContext operatorContext) {
       LOG.info("Running node: {}", operatorContext.getNodeIdentifier().getName());
-      ExecutionResult executionResult = new ExecutionResult();
-      Map<NodeIdentifier, ExecutionResult> inputs = operatorContext.getInputs();
+      Map<NodeIdentifier, List<ExecutionResult>> inputs = operatorContext.getInputs();
       List<String> executionLog = new ArrayList<>();
-      for (ExecutionResult result : inputs.values()) {
-        Object pResult = result.getResult();
-        if (result.getResult() instanceof List) {
-          List<String> list = (List<String>) pResult;
+      for (List<ExecutionResult> result : inputs.values()) {
+        ExecutionResult executionResult = result.get(0);
+        if (executionResult.getResult() instanceof List) {
+          List<String> list = (List<String>) executionResult.getResult();
           executionLog.addAll(list);
         }
       }
       executionLog.add(operatorContext.getNodeIdentifier().getName());
-      executionResult.setResult(executionLog);
-      return executionResult;
+      ExecutionResult operatorResult = new ExecutionResult();
+      operatorResult.setResult("", executionLog);
+      return operatorResult;
     }
   }
 
@@ -339,13 +290,12 @@ public class DAGExecutorTest {
     @Override
     public ExecutionResult run(OperatorContext operatorContext) {
       LOG.info("Running node: {}", operatorContext.getNodeIdentifier().getName());
-      ExecutionResult executionResult = new ExecutionResult();
-      Map<NodeIdentifier, ExecutionResult> inputs = operatorContext.getInputs();
+      Map<NodeIdentifier, List<ExecutionResult>> inputs = operatorContext.getInputs();
       List<String> executionLog = new ArrayList<>();
-      for (ExecutionResult result : inputs.values()) {
-        Object pResult = result.getResult();
-        if (result.getResult() instanceof List) {
-          List<String> list = (List<String>) pResult;
+      for (List<ExecutionResult> result : inputs.values()) {
+        ExecutionResult executionResult = result.get(0);
+        if (executionResult.getResult() instanceof List) {
+          List<String> list = (List<String>) executionResult.getResult();
           for (String s : list) {
             if (!executionLog.contains(s)) {
               executionLog.add(s);
@@ -353,9 +303,10 @@ public class DAGExecutorTest {
           }
         }
       }
+      ExecutionResult operatorResult = new ExecutionResult();
       executionLog.add(operatorContext.getNodeIdentifier().getName());
-      executionResult.setResult(executionLog);
-      return executionResult;
+      operatorResult.setResult("", executionLog);
+      return operatorResult;
     }
   }
 
@@ -371,6 +322,26 @@ public class DAGExecutorTest {
     public ExecutionResult run(OperatorContext operatorContext) {
       throw new UnsupportedOperationException("Failed in purpose.");
     }
+  }
+
+  /**
+   * Returns the execution log of the given the execution results.
+   *
+   * @param executionResults the execution results of the last node in the DAG.
+   *
+   * @return the final execution log of the DAG.
+   */
+  private List<String> checkAndGetFinalResult(ExecutionResults executionResults) {
+    Assert.assertNotNull(executionResults);
+
+    List<ExecutionResult> finalResultList = executionResults.getResult("");
+    Assert.assertTrue(CollectionUtils.isNotEmpty(finalResultList));
+    Assert.assertEquals(finalResultList.size(), 1);
+    ExecutionResult finalResult = finalResultList.get(0);
+    Assert.assertNotNull(finalResult);
+    Assert.assertNotNull(finalResult.getResult());
+    // Check whether execution order is correct
+    return (List<String>) finalResult.getResult();
   }
 
   /**
@@ -395,12 +366,12 @@ public class DAGExecutorTest {
    *
    * This method checks if the execution order in the log contains all sub-execution in the expected orders.
    *
-   * @param expectedOrders the expected sub-executions, which are totally-ordered executions.
    * @param executionLog the execution log, which could be a partially-ordered execution.
    *
+   * @param expectedOrders the expected sub-executions, which are totally-ordered executions.
    * @return true if the execution log satisfies the expected linearizations.
    */
-  private boolean checkLinearizability(List<List<String>> expectedOrders, List<String> executionLog) {
+  private boolean checkLinearizability(List<String> executionLog, List<List<String>> expectedOrders) {
     Set<String> checkedNodes = new HashSet<>();
     for (int i = 0; i < expectedOrders.size(); i++) {
       List<String> expectedOrder = expectedOrders.get(i);
@@ -457,7 +428,7 @@ public class DAGExecutorTest {
       add("3");
     }};
 
-    Assert.assertTrue(checkLinearizability(expectedOrders, executionLog));
+    Assert.assertTrue(checkLinearizability(executionLog, expectedOrders));
   }
 
   @Test(dataProvider = "ExpectedOrders")
@@ -470,7 +441,7 @@ public class DAGExecutorTest {
       add("3");
     }};
 
-    Assert.assertFalse(checkLinearizability(expectedOrders, executionLog));
+    Assert.assertFalse(checkLinearizability(executionLog, expectedOrders));
   }
 
   @Test(dataProvider = "ExpectedOrders")
@@ -485,7 +456,7 @@ public class DAGExecutorTest {
       add("6");
     }};
 
-    Assert.assertFalse(checkLinearizability(expectedOrders, executionLog));
+    Assert.assertFalse(checkLinearizability(executionLog, expectedOrders));
   }
 
   @DataProvider(name = "ExpectedOrders")

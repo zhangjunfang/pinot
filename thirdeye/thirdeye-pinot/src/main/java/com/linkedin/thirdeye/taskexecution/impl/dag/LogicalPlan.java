@@ -1,13 +1,13 @@
 package com.linkedin.thirdeye.taskexecution.impl.dag;
 
-import com.linkedin.thirdeye.taskexecution.dag.FrameworkDAG;
+import com.linkedin.thirdeye.taskexecution.dag.AbstractLogicalDAG;
 import com.linkedin.thirdeye.taskexecution.dag.NodeIdentifier;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
-public class LogicalPlan extends FrameworkDAG<LogicalNode> {
+public class LogicalPlan extends AbstractLogicalDAG<LogicalNode> {
   private Map<NodeIdentifier, LogicalNode> rootNodes = new HashMap<>();
   private Map<NodeIdentifier, LogicalNode> leafNodes = new HashMap<>();
   private Map<NodeIdentifier, LogicalNode> nodes = new HashMap<>();

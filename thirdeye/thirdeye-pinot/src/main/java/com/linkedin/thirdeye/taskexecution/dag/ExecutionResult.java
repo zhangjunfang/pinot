@@ -1,23 +1,46 @@
 package com.linkedin.thirdeye.taskexecution.dag;
 
-public class ExecutionResult<T> {
-  private T result;
-  private Class resultClass;
+import java.util.Objects;
 
-  public T getResult() {
+public class ExecutionResult<K, V> {
+  private K key;
+  private V result;
+
+  public ExecutionResult() {
+  }
+
+  public ExecutionResult(K key, V result) {
+    this.key = key;
+    this.result = result;
+  }
+
+  public void setResult(K key, V result) {
+    this.key = key;
+    this.result = result;
+  }
+
+  public K getKey() {
+    return key;
+  }
+
+  public V getResult() {
     return result;
   }
 
-  public void setResult(T result) {
-    this.result = result;
-    if (result != null) {
-      resultClass = result.getClass();
-    } else {
-      resultClass = Object.class;
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
     }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ExecutionResult<?, ?> that = (ExecutionResult<?, ?>) o;
+    return Objects.equals(key, that.key) && Objects.equals(result, that.result);
   }
 
-  public Class getResultClass() {
-    return resultClass;
+  @Override
+  public int hashCode() {
+    return Objects.hash(key);
   }
 }

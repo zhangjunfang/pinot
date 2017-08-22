@@ -3,6 +3,7 @@ package com.linkedin.thirdeye.taskexecution.dag;
 import com.linkedin.thirdeye.taskexecution.impl.dag.ExecutionStatus;
 import com.linkedin.thirdeye.taskexecution.impl.dag.NodeConfig;
 import java.util.Collection;
+import java.util.Objects;
 import java.util.concurrent.Callable;
 
 /**
@@ -28,10 +29,8 @@ import java.util.concurrent.Callable;
  * {@link com.linkedin.thirdeye.taskexecution.impl.dag.DAGExecutor} should remain agnostic to the vertical topology,
  * which is taken care of by FrameworkNode. On the other hand, FrameworkNode does not have the whole picture of
  * the workflow (DAG), it only knows the incoming node for preparing the input of its Operator.
- *
- * @param <T> the type that extends this interface.
  */
-public abstract class FrameworkNode<T extends FrameworkNode> implements Callable<NodeIdentifier> {
+public abstract class FrameworkNode implements Callable<NodeIdentifier> {
   protected NodeIdentifier nodeIdentifier = new NodeIdentifier();
   protected Class operatorClass;
   protected NodeConfig nodeConfig = new NodeConfig();
@@ -68,7 +67,7 @@ public abstract class FrameworkNode<T extends FrameworkNode> implements Callable
     return nodeConfig;
   }
 
-  public abstract FrameworkNode<T> getLogicalNode();
+  public abstract FrameworkNode getLogicalNode();
 
   public abstract Collection<FrameworkNode> getPhysicalNode();
 
@@ -76,13 +75,28 @@ public abstract class FrameworkNode<T extends FrameworkNode> implements Callable
 
   public abstract ExecutionResults getExecutionResults();
 
+  /**
+   * {@link NodeIdentifier} is always the unique identifier to a node and hence all the other fields of this class
+   * are left out on purpose.
+   */
   @Override
-  public int hashCode() {
-    return super.hashCode();
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    FrameworkNode that = (FrameworkNode) o;
+    return Objects.equals(nodeIdentifier, that.nodeIdentifier);
   }
 
+  /**
+   * {@link NodeIdentifier} is always the unique identifier to a node and hence all the other fields of this class
+   * are left out on purpose.
+   */
   @Override
-  public boolean equals(Object obj) {
-    return super.equals(obj);
+  public int hashCode() {
+    return Objects.hash(nodeIdentifier);
   }
 }
