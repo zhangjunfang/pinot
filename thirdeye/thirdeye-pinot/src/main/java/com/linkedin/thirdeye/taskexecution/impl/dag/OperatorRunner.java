@@ -4,7 +4,6 @@ import com.linkedin.thirdeye.taskexecution.dag.ExecutionResult;
 import com.linkedin.thirdeye.taskexecution.dag.ExecutionResults;
 import com.linkedin.thirdeye.taskexecution.dag.FrameworkNode;
 import com.linkedin.thirdeye.taskexecution.dag.NodeIdentifier;
-import com.linkedin.thirdeye.taskexecution.dag.OperatorResult;
 import com.linkedin.thirdeye.taskexecution.operator.Operator;
 import com.linkedin.thirdeye.taskexecution.operator.OperatorConfig;
 import com.linkedin.thirdeye.taskexecution.operator.OperatorContext;
@@ -12,7 +11,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.slf4j.Logger;
@@ -25,10 +23,9 @@ class OperatorRunner extends FrameworkNode {
   private NodeConfig nodeConfig = new NodeConfig();
   private Class operatorClass;
   private FrameworkNode logicalNode;
+  // TODO: Change to ExecutionResultReader, which could read result from a remote DB or logicalNode.
   private Map<NodeIdentifier, ExecutionResults> incomingExecutionResultsMap = new HashMap<>();
-  // TODO: Change to OperatorResultReader, which could read result from a remote DB or logicalNode.
   private ExecutionStatus executionStatus = ExecutionStatus.RUNNING;
-  private OperatorResult operatorResult = new OperatorResult();
   private ExecutionResults executionResults;
 
 
@@ -157,7 +154,7 @@ class OperatorRunner extends FrameworkNode {
     operatorContext.setNodeIdentifier(nodeIdentifier);
     for (Object key : keys) {
       for (Map.Entry<NodeIdentifier, ExecutionResults> nodeResultsEntry : incomingExecutionResults.entrySet()) {
-        List<ExecutionResult> resultWithKey = nodeResultsEntry.getValue().getResult(key);
+        ExecutionResult resultWithKey = nodeResultsEntry.getValue().getResult(key);
         operatorContext.addResult(nodeResultsEntry.getKey(), resultWithKey);
       }
     }

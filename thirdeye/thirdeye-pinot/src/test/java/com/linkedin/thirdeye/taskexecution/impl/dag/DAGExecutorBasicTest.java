@@ -12,11 +12,9 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.Assert;
@@ -24,9 +22,10 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 
-public class DAGExecutorTest {
-  private static final Logger LOG = LoggerFactory.getLogger(DAGExecutorTest.class);
+public class DAGExecutorBasicTest {
+  private static final Logger LOG = LoggerFactory.getLogger(DAGExecutorBasicTest.class);
   private ExecutorService threadPool = Executors.newFixedThreadPool(10);
+  private static final String EXECUTION_LOG_KEY = "";
 
   /**
    * DAG: root
@@ -99,7 +98,7 @@ public class DAGExecutorTest {
     LogicalNode node22 = new LogicalNode("node22", LogOperator.class);
     LogicalNode node23 = new LogicalNode("node23", LogOperator.class);
     LogicalNode node24 = new LogicalNode("node24", LogOperator.class);
-    LogicalNode leaf2 = new LogicalNode("leaf2", LogJoinOperator.class);
+    LogicalNode leaf2 = new LogicalNode("leaf2", LogOperator.class);
     dag.addEdge(node21, node22);
     dag.addEdge(node22, node23);
     dag.addEdge(node23, leaf2);
@@ -157,7 +156,7 @@ public class DAGExecutorTest {
   public void testComplexGraphExecution() {
     DAG<LogicalNode> dag = new LogicalPlan();
     LogicalNode root = new LogicalNode("root", LogOperator.class);
-    LogicalNode leaf = new LogicalNode("leaf", LogJoinOperator.class);
+    LogicalNode leaf = new LogicalNode("leaf", LogOperator.class);
 
     // sub-path 2
     LogicalNode node22 = new LogicalNode("22", LogOperator.class);
@@ -165,7 +164,7 @@ public class DAGExecutorTest {
     LogicalNode node24 = new LogicalNode("24", LogOperator.class);
     LogicalNode node25 = new LogicalNode("25", LogOperator.class);
     LogicalNode node26 = new LogicalNode("26", LogOperator.class);
-    LogicalNode node27 = new LogicalNode("27", LogJoinOperator.class);
+    LogicalNode node27 = new LogicalNode("27", LogOperator.class);
     dag.addEdge(root, node22);
     dag.addEdge(node22, node23);
     dag.addEdge(node22, node24);
@@ -252,7 +251,6 @@ public class DAGExecutorTest {
    */
   static class LogOperator implements Operator {
     private static final Logger LOG = LoggerFactory.getLogger(LogOperator.class);
-    private static final Random random = new Random();
 
     @Override
     public void initialize(OperatorConfig operatorConfig) {
@@ -261,41 +259,11 @@ public class DAGExecutorTest {
     @Override
     public ExecutionResult run(OperatorContext operatorContext) {
       LOG.info("Running node: {}", operatorContext.getNodeIdentifier().getName());
-      Map<NodeIdentifier, List<ExecutionResult>> inputs = operatorContext.getInputs();
+      Map<NodeIdentifier, ExecutionResult> inputs = operatorContext.getInputs();
       List<String> executionLog = new ArrayList<>();
-      for (List<ExecutionResult> result : inputs.values()) {
-        ExecutionResult executionResult = result.get(0);
-        if (executionResult.getResult() instanceof List) {
-          List<String> list = (List<String>) executionResult.getResult();
-          executionLog.addAll(list);
-        }
-      }
-      executionLog.add(operatorContext.getNodeIdentifier().getName());
-      ExecutionResult operatorResult = new ExecutionResult();
-      operatorResult.setResult("", executionLog);
-      return operatorResult;
-    }
-  }
-
-  /**
-   * An operator that joins lists from its incoming nodes and appends node name to the joined list.
-   */
-  static class LogJoinOperator implements Operator {
-    private static final Logger LOG = LoggerFactory.getLogger(LogJoinOperator.class);
-
-    @Override
-    public void initialize(OperatorConfig operatorConfig) {
-    }
-
-    @Override
-    public ExecutionResult run(OperatorContext operatorContext) {
-      LOG.info("Running node: {}", operatorContext.getNodeIdentifier().getName());
-      Map<NodeIdentifier, List<ExecutionResult>> inputs = operatorContext.getInputs();
-      List<String> executionLog = new ArrayList<>();
-      for (List<ExecutionResult> result : inputs.values()) {
-        ExecutionResult executionResult = result.get(0);
-        if (executionResult.getResult() instanceof List) {
-          List<String> list = (List<String>) executionResult.getResult();
+      for (ExecutionResult parentResult : inputs.values()) {
+        if (parentResult.getResult() instanceof List) {
+          List<String> list = (List<String>) parentResult.getResult();
           for (String s : list) {
             if (!executionLog.contains(s)) {
               executionLog.add(s);
@@ -303,9 +271,9 @@ public class DAGExecutorTest {
           }
         }
       }
-      ExecutionResult operatorResult = new ExecutionResult();
       executionLog.add(operatorContext.getNodeIdentifier().getName());
-      operatorResult.setResult("", executionLog);
+      ExecutionResult operatorResult = new ExecutionResult();
+      operatorResult.setResult(EXECUTION_LOG_KEY, executionLog);
       return operatorResult;
     }
   }
@@ -334,11 +302,7 @@ public class DAGExecutorTest {
   private List<String> checkAndGetFinalResult(ExecutionResults executionResults) {
     Assert.assertNotNull(executionResults);
 
-    List<ExecutionResult> finalResultList = executionResults.getResult("");
-    Assert.assertTrue(CollectionUtils.isNotEmpty(finalResultList));
-    Assert.assertEquals(finalResultList.size(), 1);
-
-    ExecutionResult finalResult = finalResultList.get(0);
+    ExecutionResult finalResult = executionResults.getResult(EXECUTION_LOG_KEY);
     Assert.assertNotNull(finalResult);
     Assert.assertNotNull(finalResult.getResult());
 

@@ -1,10 +1,7 @@
 package com.linkedin.thirdeye.taskexecution.dag;
 
-import java.util.List;
 import org.testng.Assert;
 import org.testng.annotations.Test;
-
-import static org.testng.Assert.*;
 
 public class ExecutionResultsTest {
   @Test
@@ -14,12 +11,11 @@ public class ExecutionResultsTest {
     ExecutionResults<String, Integer> executionResults = new ExecutionResults<>(new NodeIdentifier(""));
     executionResults.addResult(new ExecutionResult<>(resultKey, 1));
 
-    ExecutionResult returnedResult = executionResults.getResult(resultKey).get(0);
+    ExecutionResult returnedResult = executionResults.getResult(resultKey);
     Assert.assertNotNull(returnedResult);
     Assert.assertEquals(returnedResult.getResult(), 1);
 
-    List<ExecutionResult<String, Integer>> noResult = executionResults.getResult(randomKey);
-    Assert.assertNotNull(noResult);
-    Assert.assertEquals(noResult.size(), 0);
+    ExecutionResult<String, Integer> noResult = executionResults.getResult(randomKey);
+    Assert.assertNull(noResult);
   }
 }

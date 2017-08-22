@@ -4,12 +4,11 @@ import com.linkedin.thirdeye.taskexecution.dag.ExecutionContext;
 import com.linkedin.thirdeye.taskexecution.dag.ExecutionResult;
 import com.linkedin.thirdeye.taskexecution.dag.NodeIdentifier;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class OperatorContext implements ExecutionContext<ExecutionResult> {
   private NodeIdentifier nodeIdentifier;
-  private Map<NodeIdentifier, List<ExecutionResult>> inputs = new HashMap<>();
+  private Map<NodeIdentifier, ExecutionResult> inputs = new HashMap<>();
 
   @Override
   public NodeIdentifier getNodeIdentifier() {
@@ -22,12 +21,12 @@ public class OperatorContext implements ExecutionContext<ExecutionResult> {
   }
 
   @Override
-  public Map<NodeIdentifier, List<ExecutionResult>> getInputs() {
+  public Map<NodeIdentifier, ExecutionResult> getInputs() {
     return inputs;
   }
 
   @Override
-  public void addResult(NodeIdentifier identifier, List<ExecutionResult> operatorResult) {
+  public void addResult(NodeIdentifier identifier, ExecutionResult operatorResult) {
     inputs.put(identifier, operatorResult);
   }
 }
