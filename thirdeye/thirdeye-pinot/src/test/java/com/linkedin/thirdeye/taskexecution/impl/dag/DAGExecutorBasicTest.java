@@ -1,9 +1,9 @@
 package com.linkedin.thirdeye.taskexecution.impl.dag;
 
 import com.linkedin.thirdeye.taskexecution.dag.DAG;
-import com.linkedin.thirdeye.taskexecution.dag.ExecutionResult;
-import com.linkedin.thirdeye.taskexecution.dag.ExecutionResults;
 import com.linkedin.thirdeye.taskexecution.dag.NodeIdentifier;
+import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionResult;
+import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionResultsReader;
 import com.linkedin.thirdeye.taskexecution.operator.Operator;
 import com.linkedin.thirdeye.taskexecution.operator.OperatorConfig;
 import com.linkedin.thirdeye.taskexecution.operator.OperatorContext;
@@ -41,7 +41,7 @@ public class DAGExecutorBasicTest {
     dagConfig.setStopAtFailure(true);
     dagExecutor.execute(dag, dagConfig);
 
-    List<String> executionLog = checkAndGetFinalResult(dagExecutor.getNode(root.getIdentifier()).getExecutionResults());
+    List<String> executionLog = checkAndGetFinalResult(dagExecutor.getNode(root.getIdentifier()));
     List<String> expectedLog = new ArrayList<String>() {{
       add("root");
     }};
@@ -65,7 +65,7 @@ public class DAGExecutorBasicTest {
 
     // TODO: Check dagExecutor's execution status
 
-    List<String> executionLog = checkAndGetFinalResult(dagExecutor.getNode(node3.getIdentifier()).getExecutionResults());
+    List<String> executionLog = checkAndGetFinalResult(dagExecutor.getNode(node3.getIdentifier()));
     List<String> expectedResult = new ArrayList<String>() {{
       add("1");
       add("2");
@@ -110,7 +110,7 @@ public class DAGExecutorBasicTest {
 
     // Check path 1
     {
-      List<String> executionLog = checkAndGetFinalResult(dagExecutor.getNode(leaf1.getIdentifier()).getExecutionResults());
+      List<String> executionLog = checkAndGetFinalResult(dagExecutor.getNode(leaf1.getIdentifier()));
       List<String> expectedResult = new ArrayList<String>() {{
         add("root1");
         add("node12");
@@ -122,7 +122,7 @@ public class DAGExecutorBasicTest {
     }
     // Check path 2
     {
-      List<String> executionLog = checkAndGetFinalResult(dagExecutor.getNode(leaf2.getIdentifier()).getExecutionResults());
+      List<String> executionLog = checkAndGetFinalResult(dagExecutor.getNode(leaf2.getIdentifier()));
       List<String> expectedResult1 = new ArrayList<String>() {{
         add("root2");
         add("node22");
@@ -183,7 +183,7 @@ public class DAGExecutorBasicTest {
     DAGExecutor<LogicalNode> dagExecutor = new DAGExecutor<>(threadPool);
     dagExecutor.execute(dag, new DAGConfig());
 
-    List<String> executionLog = checkAndGetFinalResult(dagExecutor.getNode(leaf.getIdentifier()).getExecutionResults());
+    List<String> executionLog = checkAndGetFinalResult(dagExecutor.getNode(leaf.getIdentifier()));
     List<String> expectedOrder1 = new ArrayList<String>() {{
       add("root");
       add("12");
@@ -236,7 +236,7 @@ public class DAGExecutorBasicTest {
     DAGExecutor<LogicalNode> dagExecutor = new DAGExecutor<>(threadPool);
     dagExecutor.execute(dag, dagConfig);
 
-    List<String> executionLog = checkAndGetFinalResult(dagExecutor.getNode(node3.getIdentifier()).getExecutionResults());
+    List<String> executionLog = checkAndGetFinalResult(dagExecutor.getNode(node3.getIdentifier()));
     List<String> expectedResult = new ArrayList<String>() {{
       add("3");
     }};
@@ -293,16 +293,18 @@ public class DAGExecutorBasicTest {
   }
 
   /**
-   * Returns the execution log of the given the execution results.
+   * Returns the execution log of the given the node.
    *
-   * @param executionResults the execution results of the last node in the DAG.
+   * @param node the last node in the DAG.
    *
    * @return the final execution log of the DAG.
    */
-  private List<String> checkAndGetFinalResult(ExecutionResults executionResults) {
-    Assert.assertNotNull(executionResults);
+  private List<String> checkAndGetFinalResult(LogicalNode node) {
+    ExecutionResultsReader executionResultsReader = node.getExecutionResultsReader();
+    Assert.assertNotNull(executionResultsReader);
+    Assert.assertTrue(executionResultsReader.hasNext());
 
-    ExecutionResult finalResult = executionResults.getResult(EXECUTION_LOG_KEY);
+    ExecutionResult finalResult = executionResultsReader.next();
     Assert.assertNotNull(finalResult);
     Assert.assertNotNull(finalResult.getResult());
 

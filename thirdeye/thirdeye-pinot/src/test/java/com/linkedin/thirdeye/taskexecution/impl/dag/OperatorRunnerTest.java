@@ -1,6 +1,6 @@
 package com.linkedin.thirdeye.taskexecution.impl.dag;
 
-import com.linkedin.thirdeye.taskexecution.dag.ExecutionResult;
+import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionResult;
 import com.linkedin.thirdeye.taskexecution.dag.NodeIdentifier;
 import com.linkedin.thirdeye.taskexecution.operator.Operator;
 import com.linkedin.thirdeye.taskexecution.operator.OperatorConfig;
@@ -21,6 +21,21 @@ public class OperatorRunnerTest {
   }
 
   @Test
+  public void testSuccessInitializeOperator() throws InstantiationException, IllegalAccessException {
+    OperatorRunner.initializeOperator(DummyOperator.class, new OperatorConfig());
+  }
+
+  @Test
+  public void testFailureInitializeOperator() {
+    try {
+      OperatorRunner.initializeOperator(FailedInitializedOperator.class, new OperatorConfig());
+    } catch (Exception e) {
+      return;
+    }
+    Assert.fail();
+  }
+
+  @Test
   public void testSuccessOfOperator() {
     NodeConfig nodeConfig = new NodeConfig();
     nodeConfig.setSkipAtFailure(false);
@@ -35,7 +50,7 @@ public class OperatorRunnerTest {
     NodeConfig nodeConfig = new NodeConfig();
     nodeConfig.setSkipAtFailure(false);
     nodeConfig.setNumRetryAtError(1);
-    OperatorRunner runner = new OperatorRunner(new NodeIdentifier(), nodeConfig, FailedOperator.class);
+    OperatorRunner runner = new OperatorRunner(new NodeIdentifier(), nodeConfig, FailedRunOperator.class);
     runner.call();
     Assert.assertEquals(runner.getExecutionStatus(), ExecutionStatus.FAILED);
   }
@@ -45,7 +60,7 @@ public class OperatorRunnerTest {
     NodeConfig nodeConfig = new NodeConfig();
     nodeConfig.setSkipAtFailure(true);
     nodeConfig.setNumRetryAtError(2);
-    OperatorRunner runner = new OperatorRunner(new NodeIdentifier(), nodeConfig, FailedOperator.class);
+    OperatorRunner runner = new OperatorRunner(new NodeIdentifier(), nodeConfig, FailedRunOperator.class);
     runner.call();
     Assert.assertEquals(runner.getExecutionStatus(), ExecutionStatus.SKIPPED);
   }
@@ -61,14 +76,26 @@ public class OperatorRunnerTest {
     }
   }
 
-  static class FailedOperator implements Operator {
+  static class FailedInitializedOperator implements Operator {
+    @Override
+    public void initialize(OperatorConfig operatorConfig) {
+      throw new UnsupportedOperationException("Failed during initialization IN PURPOSE.");
+    }
+
+    @Override
+    public ExecutionResult run(OperatorContext operatorContext) {
+      return new ExecutionResult();
+    }
+  }
+
+  static class FailedRunOperator implements Operator {
     @Override
     public void initialize(OperatorConfig operatorConfig) {
     }
 
     @Override
     public ExecutionResult run(OperatorContext operatorContext) {
-      throw new UnsupportedOperationException("Failed in purpose.");
+      throw new UnsupportedOperationException("Failed during running IN PURPOSE.");
     }
   }
 }

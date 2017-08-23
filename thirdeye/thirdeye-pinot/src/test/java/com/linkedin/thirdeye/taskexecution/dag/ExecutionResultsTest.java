@@ -1,5 +1,7 @@
 package com.linkedin.thirdeye.taskexecution.dag;
 
+import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionResult;
+import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionResults;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 

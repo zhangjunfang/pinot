@@ -1,9 +1,9 @@
 package com.linkedin.thirdeye.taskexecution.impl.dag;
 
 import com.linkedin.thirdeye.taskexecution.dag.AbstractLogicalNode;
-import com.linkedin.thirdeye.taskexecution.dag.ExecutionResults;
 import com.linkedin.thirdeye.taskexecution.dag.FrameworkNode;
 import com.linkedin.thirdeye.taskexecution.dag.NodeIdentifier;
+import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionResultsReader;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -11,7 +11,7 @@ import java.util.Set;
 import org.apache.commons.collections.CollectionUtils;
 
 /**
- * Implementation of FrameworkNode that uses one thread of a machine to execute {@link OperatorRunner}.
+ * LogicalNode considers partitioning of work.
  */
 public class LogicalNode extends AbstractLogicalNode<LogicalNode> {
 
@@ -33,13 +33,16 @@ public class LogicalNode extends AbstractLogicalNode<LogicalNode> {
   }
 
   @Override
-  public ExecutionResults getExecutionResults() {
-    // Currently assume that there is only one operator runner
+  public ExecutionResultsReader getExecutionResultsReader() {
     if (CollectionUtils.isNotEmpty(physicalNodes)) {
-      FrameworkNode physicalNode = (FrameworkNode) CollectionUtils.get(physicalNodes, 0);
-      return physicalNode.getExecutionResults();
+      if (physicalNodes.size() == 1) {
+        FrameworkNode physicalNode = (FrameworkNode) CollectionUtils.get(physicalNodes, 0);
+        return physicalNode.getExecutionResultsReader();
+      } else {
+        throw new IllegalArgumentException("Multiple partitions are not supported yet.");
+      }
     }
-    return new ExecutionResults(nodeIdentifier);
+    return new InMemoryExecutionResultsReader();
   }
 
   @Override
@@ -48,9 +51,9 @@ public class LogicalNode extends AbstractLogicalNode<LogicalNode> {
     physicalNodes.add(runner);
 
     for (FrameworkNode pNode : this.getIncomingNodes()) {
-      ExecutionResults executionResults = pNode.getExecutionResults();
-      runner.addIncomingExecutionResult(pNode.getIdentifier(), executionResults);
+      runner.addIncomingExecutionResultReader(pNode.getIdentifier(), pNode.getExecutionResultsReader());
     }
+
     return runner.call();
   }
 

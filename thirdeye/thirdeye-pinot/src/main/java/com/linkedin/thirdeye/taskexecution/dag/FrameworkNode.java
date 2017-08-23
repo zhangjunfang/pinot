@@ -1,5 +1,6 @@
 package com.linkedin.thirdeye.taskexecution.dag;
 
+import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionResultsReader;
 import com.linkedin.thirdeye.taskexecution.impl.dag.ExecutionStatus;
 import com.linkedin.thirdeye.taskexecution.impl.dag.NodeConfig;
 import java.util.Collection;
@@ -73,7 +74,7 @@ public abstract class FrameworkNode implements Callable<NodeIdentifier> {
 
   public abstract ExecutionStatus getExecutionStatus();
 
-  public abstract ExecutionResults getExecutionResults();
+  public abstract ExecutionResultsReader getExecutionResultsReader();
 
   /**
    * {@link NodeIdentifier} is always the unique identifier to a node and hence all the other fields of this class

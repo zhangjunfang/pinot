@@ -1,7 +1,7 @@
 package com.linkedin.thirdeye.taskexecution.impl.dag;
 
 import com.linkedin.thirdeye.taskexecution.dag.DAG;
-import com.linkedin.thirdeye.taskexecution.dag.ExecutionResult;
+import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionResult;
 import com.linkedin.thirdeye.taskexecution.operator.Operator;
 import com.linkedin.thirdeye.taskexecution.operator.OperatorConfig;
 import com.linkedin.thirdeye.taskexecution.operator.OperatorContext;
@@ -61,6 +61,19 @@ public class LogicalPlanTest {
     Assert.assertEquals(dag.getRootNodes().size(), 1);
     Assert.assertEquals(dag.getAllNodes().size(), 3);
     Assert.assertEquals(dag.getLeafNodes().size(), 2);
+  }
+
+  @Test
+  public void testAddNodeWithNullNodeIdentifier() {
+    LogicalPlan dag = new LogicalPlan();
+    try {
+      LogicalNode node = new LogicalNode(null, DummyOperator.class);
+      node.setNodeIdentifier(null);
+      dag.addNode(node);
+    } catch (IllegalArgumentException e) {
+      return;
+    }
+    Assert.fail();
   }
 
   static class DummyOperator implements Operator {

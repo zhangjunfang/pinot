@@ -1,9 +1,10 @@
 package com.linkedin.thirdeye.taskexecution.impl.dag;
 
-import com.linkedin.thirdeye.taskexecution.dag.ExecutionResult;
-import com.linkedin.thirdeye.taskexecution.dag.ExecutionResults;
+import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionResult;
+import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionResults;
 import com.linkedin.thirdeye.taskexecution.dag.FrameworkNode;
 import com.linkedin.thirdeye.taskexecution.dag.NodeIdentifier;
+import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionResultsReader;
 import com.linkedin.thirdeye.taskexecution.operator.Operator;
 import com.linkedin.thirdeye.taskexecution.operator.OperatorConfig;
 import com.linkedin.thirdeye.taskexecution.operator.OperatorContext;
@@ -16,7 +17,9 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
+/**
+ * OperatorRunner considers multi-threading.
+ */
 class OperatorRunner extends FrameworkNode {
   private static final Logger LOG = LoggerFactory.getLogger(OperatorRunner.class);
 
@@ -24,7 +27,7 @@ class OperatorRunner extends FrameworkNode {
   private Class operatorClass;
   private FrameworkNode logicalNode;
   // TODO: Change to ExecutionResultReader, which could read result from a remote DB or logicalNode.
-  private Map<NodeIdentifier, ExecutionResults> incomingExecutionResultsMap = new HashMap<>();
+  private Map<NodeIdentifier, ExecutionResultsReader> incomingResultsReaderMap = new HashMap<>();
   private ExecutionStatus executionStatus = ExecutionStatus.RUNNING;
   private ExecutionResults executionResults;
 
@@ -41,12 +44,12 @@ class OperatorRunner extends FrameworkNode {
     this.executionResults = new ExecutionResults(nodeIdentifier);
   }
 
-  public void addIncomingExecutionResult(NodeIdentifier nodeIdentifier, ExecutionResults executionResults) {
-    incomingExecutionResultsMap.put(nodeIdentifier, executionResults);
+  public void addIncomingExecutionResultReader(NodeIdentifier nodeIdentifier, ExecutionResultsReader executionResultsReader) {
+    incomingResultsReaderMap.put(nodeIdentifier, executionResultsReader);
   }
 
-  public Map<NodeIdentifier, ExecutionResults> getIncomingExecutionResultsMap() {
-    return incomingExecutionResultsMap;
+  public Map<NodeIdentifier, ExecutionResultsReader> getIncomingResultsReaderMap() {
+    return incomingResultsReaderMap;
   }
 
   @Override
@@ -65,8 +68,8 @@ class OperatorRunner extends FrameworkNode {
   }
 
   @Override
-  public ExecutionResults getExecutionResults() {
-    return executionResults;
+  public ExecutionResultsReader getExecutionResultsReader() {
+    return new InMemoryExecutionResultsReader(executionResults);
   }
 
   /**
@@ -88,7 +91,7 @@ class OperatorRunner extends FrameworkNode {
         try {
           OperatorConfig operatorConfig = convertNodeConfigToOperatorConfig(nodeConfig);
           Operator operator = initializeOperator(operatorClass, operatorConfig);
-          OperatorContext operatorContext = prepareInputOperatorContext(incomingExecutionResultsMap);
+          OperatorContext operatorContext = buildInputOperatorContext(nodeIdentifier, incomingResultsReaderMap);
           ExecutionResult operatorResult = operator.run(operatorContext);
           executionResults.addResult(operatorResult);
         } catch (Exception e) {
@@ -113,7 +116,7 @@ class OperatorRunner extends FrameworkNode {
 
   @Override
   public Collection<FrameworkNode> getPhysicalNode() {
-    return Collections.EMPTY_LIST;
+    return Collections.emptyList();
   }
 
   private void setFailure(Exception e) {
@@ -130,32 +133,37 @@ class OperatorRunner extends FrameworkNode {
     return null;
   }
 
-  private static Operator initializeOperator(Class operatorClass, OperatorConfig operatorConfig)
+  static Operator initializeOperator(Class operatorClass, OperatorConfig operatorConfig)
       throws IllegalAccessException, InstantiationException {
     try {
       Operator operator = (Operator) operatorClass.newInstance();
       operator.initialize(operatorConfig);
       return operator;
-    } catch (InstantiationException | IllegalAccessException e) {
+    } catch (Exception e) {
+      // We cannot do anything if something bad happens here excepting rethrow the exception.
       LOG.warn("Failed to initialize {}", operatorClass.getName());
       throw e;
     }
   }
 
-  // TODO: Expand this method to consider partitioning
-  private OperatorContext prepareInputOperatorContext(Map<NodeIdentifier, ExecutionResults> incomingExecutionResults) {
+  // TODO: Expand this method to consider multi-threading
+  static OperatorContext buildInputOperatorContext(NodeIdentifier nodeIdentifier,
+      Map<NodeIdentifier, ExecutionResultsReader> incomingResultsReader) {
     Set keys = new HashSet();
-    for (Map.Entry<NodeIdentifier, ExecutionResults> nodeResultsEntry : incomingExecutionResults.entrySet()) {
-      ExecutionResults executionResults = nodeResultsEntry.getValue();
-      keys.addAll(executionResults.keySet());
+    for (Map.Entry<NodeIdentifier, ExecutionResultsReader> nodeResultsEntry : incomingResultsReader.entrySet()) {
+      ExecutionResultsReader resultsReader = nodeResultsEntry.getValue();
+      while (resultsReader.hasNext()) {
+        ExecutionResult next = resultsReader.next();
+        keys.add(next.getKey());
+      }
     }
 
     OperatorContext operatorContext = new OperatorContext();
     operatorContext.setNodeIdentifier(nodeIdentifier);
     for (Object key : keys) {
-      for (Map.Entry<NodeIdentifier, ExecutionResults> nodeResultsEntry : incomingExecutionResults.entrySet()) {
-        ExecutionResult resultWithKey = nodeResultsEntry.getValue().getResult(key);
-        operatorContext.addResult(nodeResultsEntry.getKey(), resultWithKey);
+      for (Map.Entry<NodeIdentifier, ExecutionResultsReader> nodeReadersEntry : incomingResultsReader.entrySet()) {
+        ExecutionResult resultWithKey = nodeReadersEntry.getValue().get(key);
+        operatorContext.addResult(nodeReadersEntry.getKey(), resultWithKey);
       }
     }
     return operatorContext;
