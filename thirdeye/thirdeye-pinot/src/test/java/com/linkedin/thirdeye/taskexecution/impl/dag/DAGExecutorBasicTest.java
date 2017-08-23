@@ -3,6 +3,7 @@ package com.linkedin.thirdeye.taskexecution.impl.dag;
 import com.linkedin.thirdeye.taskexecution.dag.DAG;
 import com.linkedin.thirdeye.taskexecution.dag.NodeIdentifier;
 import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionResult;
+import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionResults;
 import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionResultsReader;
 import com.linkedin.thirdeye.taskexecution.operator.Operator;
 import com.linkedin.thirdeye.taskexecution.operator.OperatorConfig;
@@ -259,11 +260,12 @@ public class DAGExecutorBasicTest {
     @Override
     public ExecutionResult run(OperatorContext operatorContext) {
       LOG.info("Running node: {}", operatorContext.getNodeIdentifier().getName());
-      Map<NodeIdentifier, ExecutionResult> inputs = operatorContext.getInputs();
+      Map<NodeIdentifier, ExecutionResults> inputs = operatorContext.getInputs();
       List<String> executionLog = new ArrayList<>();
-      for (ExecutionResult parentResult : inputs.values()) {
-        if (parentResult.getResult() instanceof List) {
-          List<String> list = (List<String>) parentResult.getResult();
+      for (ExecutionResults parentResult : inputs.values()) {
+        Object result = parentResult.getResult(EXECUTION_LOG_KEY).result();
+        if (result instanceof List) {
+          List<String> list = (List<String>) result;
           for (String s : list) {
             if (!executionLog.contains(s)) {
               executionLog.add(s);
@@ -306,9 +308,9 @@ public class DAGExecutorBasicTest {
 
     ExecutionResult finalResult = executionResultsReader.next();
     Assert.assertNotNull(finalResult);
-    Assert.assertNotNull(finalResult.getResult());
+    Assert.assertNotNull(finalResult.result());
 
-    List<String> result = (List<String>) finalResult.getResult();
+    List<String> result = (List<String>) finalResult.result();
     Assert.assertNotNull(result);
     return result;
   }
@@ -345,7 +347,7 @@ public class DAGExecutorBasicTest {
     for (int i = 0; i < expectedOrders.size(); i++) {
       List<String> expectedOrder = expectedOrders.get(i);
       if (expectedOrder.size() > executionLog.size()) {
-        throw new IllegalArgumentException("The " + i + "th expected order should be shorter than the execution log.");
+        throw new IllegalArgumentException("Execution log is shorter than the " + i + "th expected order.");
       }
       int expectedIdx = 0;
       int logIdx = 0;

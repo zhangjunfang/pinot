@@ -1,14 +1,15 @@
 package com.linkedin.thirdeye.taskexecution.operator;
 
+import com.linkedin.thirdeye.taskexecution.dag.NodeIdentifier;
 import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionContext;
 import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionResult;
-import com.linkedin.thirdeye.taskexecution.dag.NodeIdentifier;
+import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionResults;
 import java.util.HashMap;
 import java.util.Map;
 
-public class OperatorContext implements ExecutionContext<ExecutionResult> {
+public class OperatorContext<K, V> implements ExecutionContext<ExecutionResults<K, V>> {
   private NodeIdentifier nodeIdentifier;
-  private Map<NodeIdentifier, ExecutionResult> inputs = new HashMap<>();
+  private Map<NodeIdentifier, ExecutionResults<K, V>> inputs = new HashMap<>();
 
   @Override
   public NodeIdentifier getNodeIdentifier() {
@@ -21,12 +22,12 @@ public class OperatorContext implements ExecutionContext<ExecutionResult> {
   }
 
   @Override
-  public Map<NodeIdentifier, ExecutionResult> getInputs() {
+  public Map<NodeIdentifier, ExecutionResults<K, V>> getInputs() {
     return inputs;
   }
 
   @Override
-  public void addResult(NodeIdentifier identifier, ExecutionResult operatorResult) {
+  public void addResults(NodeIdentifier identifier, ExecutionResults<K, V> operatorResult) {
     inputs.put(identifier, operatorResult);
   }
 }

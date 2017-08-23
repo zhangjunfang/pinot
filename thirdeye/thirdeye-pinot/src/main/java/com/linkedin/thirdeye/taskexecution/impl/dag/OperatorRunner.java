@@ -1,9 +1,9 @@
 package com.linkedin.thirdeye.taskexecution.impl.dag;
 
-import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionResult;
-import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionResults;
 import com.linkedin.thirdeye.taskexecution.dag.FrameworkNode;
 import com.linkedin.thirdeye.taskexecution.dag.NodeIdentifier;
+import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionResult;
+import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionResults;
 import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionResultsReader;
 import com.linkedin.thirdeye.taskexecution.operator.Operator;
 import com.linkedin.thirdeye.taskexecution.operator.OperatorConfig;
@@ -11,9 +11,7 @@ import com.linkedin.thirdeye.taskexecution.operator.OperatorContext;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -149,21 +147,32 @@ class OperatorRunner extends FrameworkNode {
   // TODO: Expand this method to consider multi-threading
   static OperatorContext buildInputOperatorContext(NodeIdentifier nodeIdentifier,
       Map<NodeIdentifier, ExecutionResultsReader> incomingResultsReader) {
-    Set keys = new HashSet();
-    for (Map.Entry<NodeIdentifier, ExecutionResultsReader> nodeResultsEntry : incomingResultsReader.entrySet()) {
-      ExecutionResultsReader resultsReader = nodeResultsEntry.getValue();
-      while (resultsReader.hasNext()) {
-        ExecutionResult next = resultsReader.next();
-        keys.add(next.getKey());
-      }
-    }
+    // Experimental code for considering multi-threading
+//    Set keys = new HashSet();
+//    for (Map.Entry<NodeIdentifier, ExecutionResultsReader> nodeResultsEntry : incomingResultsReader.entrySet()) {
+//      ExecutionResultsReader resultsReader = nodeResultsEntry.getValue();
+//      while (resultsReader.hasNext()) {
+//        ExecutionResult next = resultsReader.next();
+//        keys.add(next.key());
+//      }
+//    }
 
     OperatorContext operatorContext = new OperatorContext();
     operatorContext.setNodeIdentifier(nodeIdentifier);
-    for (Object key : keys) {
-      for (Map.Entry<NodeIdentifier, ExecutionResultsReader> nodeReadersEntry : incomingResultsReader.entrySet()) {
-        ExecutionResult resultWithKey = nodeReadersEntry.getValue().get(key);
-        operatorContext.addResult(nodeReadersEntry.getKey(), resultWithKey);
+    for (Map.Entry<NodeIdentifier, ExecutionResultsReader> nodeReadersEntry : incomingResultsReader.entrySet()) {
+      ExecutionResults executionResults = new ExecutionResults(nodeReadersEntry.getKey());
+      ExecutionResultsReader reader = nodeReadersEntry.getValue();
+      boolean hasResult = false;
+      while (reader.hasNext()) {
+        executionResults.addResult(reader.next());
+        hasResult = true;
+      }
+      // Experimental code for considering multi-threading
+//      for (Object key : keys) {
+//        executionResults.addResult(reader.get(key));
+//      }
+      if (hasResult) {
+        operatorContext.addResults(nodeReadersEntry.getKey(), executionResults);
       }
     }
     return operatorContext;

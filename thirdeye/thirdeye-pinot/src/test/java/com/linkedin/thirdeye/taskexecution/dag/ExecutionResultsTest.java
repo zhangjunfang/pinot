@@ -15,7 +15,7 @@ public class ExecutionResultsTest {
 
     ExecutionResult returnedResult = executionResults.getResult(resultKey);
     Assert.assertNotNull(returnedResult);
-    Assert.assertEquals(returnedResult.getResult(), 1);
+    Assert.assertEquals(returnedResult.result(), 1);
 
     ExecutionResult<String, Integer> noResult = executionResults.getResult(randomKey);
     Assert.assertNull(noResult);

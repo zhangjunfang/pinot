@@ -29,7 +29,7 @@ public class ExecutionResults<K, V> {
    * @return the previous {@link ExecutionResult} that is associated with the key.
    */
   public ExecutionResult<K, V> addResult(ExecutionResult<K, V> executionResult) {
-    K key = executionResult.getKey();
+    K key = executionResult.key();
     ExecutionResult<K, V> previousResult = results.get(key);
     results.put(key, executionResult);
     return previousResult;

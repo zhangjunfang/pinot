@@ -19,11 +19,11 @@ public class ExecutionResult<K, V> {
     this.result = result;
   }
 
-  public K getKey() {
+  public K key() {
     return key;
   }
 
-  public V getResult() {
+  public V result() {
     return result;
   }
 
