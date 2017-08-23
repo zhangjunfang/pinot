@@ -42,11 +42,11 @@ import com.linkedin.pinot.core.indexsegment.IndexSegment;
 import com.linkedin.pinot.core.indexsegment.generator.SegmentVersion;
 import com.linkedin.pinot.core.realtime.converter.RealtimeSegmentConverter;
 import com.linkedin.pinot.core.realtime.impl.RealtimeSegmentImpl;
-import com.linkedin.pinot.core.realtime.impl.kafka.KafkaConsumerFactory;
+import com.linkedin.pinot.core.realtime.impl.kafka.PinotKafkaConsumerFactory;
 import com.linkedin.pinot.core.realtime.impl.kafka.PinotKafkaConsumer;
 import com.linkedin.pinot.core.realtime.impl.kafka.KafkaLowLevelStreamProviderConfig;
 import com.linkedin.pinot.core.realtime.impl.kafka.KafkaMessageDecoder;
-import com.linkedin.pinot.core.realtime.impl.kafka.SimpleConsumerFactory;
+import com.linkedin.pinot.core.realtime.impl.kafka.SimpleConsumerFactoryPinot;
 import com.linkedin.pinot.core.realtime.impl.kafka.SimpleConsumerWrapper;
 import com.linkedin.pinot.core.segment.index.loader.IndexLoadingConfig;
 import com.linkedin.pinot.server.realtime.ServerSegmentCompletionProtocolHandler;
@@ -173,7 +173,7 @@ public class LLRealtimeSegmentDataManager extends RealtimeSegmentDataManager {
   private final SegmentVersion _segmentVersion;
   private final SegmentBuildTimeLeaseExtender _leaseExtender;
   private SegmentFileAndOffset _segmentFileAndOffset;
-  private final KafkaConsumerFactory _kafkaConsumerFactory;
+  private final PinotKafkaConsumerFactory _pinotKafkaConsumerFactory;
 
   // Segment end criteria
   private volatile long _consumeEndTime = 0;
@@ -873,7 +873,7 @@ public class LLRealtimeSegmentDataManager extends RealtimeSegmentDataManager {
     _instanceId = _realtimeTableDataManager.getServerInstance();
     _leaseExtender = SegmentBuildTimeLeaseExtender.getLeaseExtender(_instanceId);
     _protocolHandler = new ServerSegmentCompletionProtocolHandler(_instanceId);
-    _kafkaConsumerFactory = new SimpleConsumerFactory();
+    _pinotKafkaConsumerFactory = new SimpleConsumerFactoryPinot();
 
     // TODO Validate configs
     IndexingConfig indexingConfig = _tableConfig.getIndexingConfig();
@@ -1014,7 +1014,7 @@ public class LLRealtimeSegmentDataManager extends RealtimeSegmentDataManager {
       }
     }
     segmentLogger.info("Creating new Kafka consumer wrapper, reason: {}", reason);
-    _consumerWrapper = _kafkaConsumerFactory.buildConsumer(_kafkaBootstrapNodes, _clientId, _kafkaTopic,
+    _consumerWrapper = _pinotKafkaConsumerFactory.buildConsumer(_kafkaBootstrapNodes, _clientId, _kafkaTopic,
         _kafkaPartitionId, _kafkaStreamMetadata.getKafkaConnectionTimeoutMillis());
   }
 
