@@ -76,7 +76,7 @@ public class LogicalPlanTest {
     Assert.fail();
   }
 
-  static class DummyOperator implements Operator {
+  public static class DummyOperator implements Operator {
     @Override
     public void initialize(OperatorConfig operatorConfig) {
     }

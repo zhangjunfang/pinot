@@ -4,6 +4,7 @@ import com.linkedin.thirdeye.taskexecution.dag.AbstractLogicalNode;
 import com.linkedin.thirdeye.taskexecution.dag.FrameworkNode;
 import com.linkedin.thirdeye.taskexecution.dag.NodeIdentifier;
 import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionResultsReader;
+import com.linkedin.thirdeye.taskexecution.impl.operator.OperatorRunner;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;

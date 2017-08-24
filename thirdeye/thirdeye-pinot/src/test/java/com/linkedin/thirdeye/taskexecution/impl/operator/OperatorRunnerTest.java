@@ -1,9 +1,13 @@
-package com.linkedin.thirdeye.taskexecution.impl.dag;
+package com.linkedin.thirdeye.taskexecution.impl.operator;
 
 import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionResult;
 import com.linkedin.thirdeye.taskexecution.dag.NodeIdentifier;
 import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionResults;
 import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionResultsReader;
+import com.linkedin.thirdeye.taskexecution.impl.dag.ExecutionStatus;
+import com.linkedin.thirdeye.taskexecution.impl.dag.InMemoryExecutionResultsReader;
+import com.linkedin.thirdeye.taskexecution.impl.dag.NodeConfig;
+import com.linkedin.thirdeye.taskexecution.impl.operator.OperatorRunner;
 import com.linkedin.thirdeye.taskexecution.operator.Operator;
 import com.linkedin.thirdeye.taskexecution.operator.OperatorConfig;
 import com.linkedin.thirdeye.taskexecution.operator.OperatorContext;
@@ -26,21 +30,6 @@ public class OperatorRunnerTest {
   }
 
   @Test
-  public void testSuccessInitializeOperator() throws InstantiationException, IllegalAccessException {
-    OperatorRunner.initializeOperator(DummyOperator.class, new OperatorConfig());
-  }
-
-  @Test
-  public void testFailureInitializeOperator() {
-    try {
-      OperatorRunner.initializeOperator(FailedInitializedOperator.class, new OperatorConfig());
-    } catch (Exception e) {
-      return;
-    }
-    Assert.fail();
-  }
-
-  @Test
   public void testBuildInputOperatorContext() {
     Map<NodeIdentifier, ExecutionResultsReader> incomingResultsReader = new HashMap<>();
     NodeIdentifier node1Identifier = new NodeIdentifier("node1");
@@ -50,7 +39,6 @@ public class OperatorRunnerTest {
     String key12 = "result12";
     String key21 = "result21";
     String key22 = "result22";
-    String key31 = "result31";
     {
       ExecutionResults<String, Integer> executionResults1 = new ExecutionResults<>(node1Identifier);
       executionResults1.addResult(new ExecutionResult<>(key11, 11));
@@ -90,7 +78,7 @@ public class OperatorRunnerTest {
   }
 
   @Test
-  public void testSuccessOfOperator() {
+  public void testSuccessRunOfOperator() {
     NodeConfig nodeConfig = new NodeConfig();
     nodeConfig.setSkipAtFailure(false);
     nodeConfig.setNumRetryAtError(0);
@@ -100,7 +88,7 @@ public class OperatorRunnerTest {
   }
 
   @Test
-  public void testFailureOfOperator() {
+  public void testFailureRunOfOperator() {
     NodeConfig nodeConfig = new NodeConfig();
     nodeConfig.setSkipAtFailure(false);
     nodeConfig.setNumRetryAtError(1);
@@ -110,7 +98,7 @@ public class OperatorRunnerTest {
   }
 
   @Test
-  public void testSkippedOfOperator() {
+  public void testSkippedRunOfOperator() {
     NodeConfig nodeConfig = new NodeConfig();
     nodeConfig.setSkipAtFailure(true);
     nodeConfig.setNumRetryAtError(2);
@@ -119,7 +107,7 @@ public class OperatorRunnerTest {
     Assert.assertEquals(runner.getExecutionStatus(), ExecutionStatus.SKIPPED);
   }
 
-  static class DummyOperator implements Operator {
+  public static class DummyOperator implements Operator {
     @Override
     public void initialize(OperatorConfig operatorConfig) {
     }
@@ -130,19 +118,7 @@ public class OperatorRunnerTest {
     }
   }
 
-  static class FailedInitializedOperator implements Operator {
-    @Override
-    public void initialize(OperatorConfig operatorConfig) {
-      throw new UnsupportedOperationException("Failed during initialization IN PURPOSE.");
-    }
-
-    @Override
-    public ExecutionResult run(OperatorContext operatorContext) {
-      return new ExecutionResult();
-    }
-  }
-
-  static class FailedRunOperator implements Operator {
+  public static class FailedRunOperator implements Operator {
     @Override
     public void initialize(OperatorConfig operatorConfig) {
     }

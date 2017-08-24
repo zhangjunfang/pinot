@@ -4,8 +4,6 @@ import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionResultsReader;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import static org.testng.Assert.*;
-
 public class LogicalNodeTest {
   private LogicalNode node;
   @Test

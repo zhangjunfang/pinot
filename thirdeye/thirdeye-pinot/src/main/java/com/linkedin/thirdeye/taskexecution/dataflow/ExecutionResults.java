@@ -54,4 +54,13 @@ public class ExecutionResults<K, V> {
   public Set<K> keySet() {
     return results.keySet();
   }
+
+  /**
+   * Returns the number of results that is stored in this collection of results.
+   *
+   * @return the number of results that is stored in this collection of results.
+   */
+  public int size() {
+    return results.size();
+  }
 }

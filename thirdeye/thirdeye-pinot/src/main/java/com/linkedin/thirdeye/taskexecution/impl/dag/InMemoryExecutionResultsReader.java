@@ -6,6 +6,7 @@ import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionResultsReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 public class InMemoryExecutionResultsReader<K, V> implements ExecutionResultsReader<K, V> {
   private ExecutionResults<K, V> executionResults;
@@ -27,7 +28,11 @@ public class InMemoryExecutionResultsReader<K, V> implements ExecutionResultsRea
 
   @Override
   public ExecutionResult<K, V> next() {
-    return executionResults.getResult(keyList.get(idx++));
+    if (hasNext()) {
+      return executionResults.getResult(keyList.get(idx++));
+    } else {
+      throw new NoSuchElementException();
+    }
   }
 
   @Override

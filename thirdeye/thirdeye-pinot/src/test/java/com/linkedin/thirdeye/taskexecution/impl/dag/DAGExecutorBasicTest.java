@@ -250,7 +250,7 @@ public class DAGExecutorBasicTest {
   /**
    * An operator that appends node name to a list, which is passed in from its incoming nodes.
    */
-  static class LogOperator implements Operator {
+  public static class LogOperator implements Operator {
     private static final Logger LOG = LoggerFactory.getLogger(LogOperator.class);
 
     @Override
@@ -283,7 +283,7 @@ public class DAGExecutorBasicTest {
   /**
    * An operator that always fails.
    */
-  static class FailedOperator implements Operator {
+  public static class FailedOperator implements Operator {
     @Override
     public void initialize(OperatorConfig operatorConfig) {
     }

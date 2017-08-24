@@ -2,7 +2,6 @@ package com.linkedin.thirdeye.taskexecution.operator;
 
 import com.linkedin.thirdeye.taskexecution.dag.NodeIdentifier;
 import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionContext;
-import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionResult;
 import com.linkedin.thirdeye.taskexecution.dataflow.ExecutionResults;
 import java.util.HashMap;
 import java.util.Map;
