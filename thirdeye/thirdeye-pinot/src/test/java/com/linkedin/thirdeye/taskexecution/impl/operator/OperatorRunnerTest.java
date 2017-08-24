@@ -82,9 +82,21 @@ public class OperatorRunnerTest {
     NodeConfig nodeConfig = new NodeConfig();
     nodeConfig.setSkipAtFailure(false);
     nodeConfig.setNumRetryAtError(0);
+
+    ExecutionResults<String, Integer> executionResults = new ExecutionResults<>(new NodeIdentifier("DummyParent"));
+    ExecutionResult<String, Integer> executionResult = new ExecutionResult<>("TestDummy", 123);
+    executionResults.addResult(executionResult);
+    ExecutionResultsReader reader = new InMemoryExecutionResultsReader(executionResults);
+
     OperatorRunner runner = new OperatorRunner(new NodeIdentifier(), nodeConfig, DummyOperator.class);
+    runner.addIncomingExecutionResultReader(new NodeIdentifier("DummyNode"), reader);
     runner.call();
     Assert.assertEquals(runner.getExecutionStatus(), ExecutionStatus.SUCCESS);
+
+    ExecutionResultsReader executionResultsReader = runner.getExecutionResultsReader();
+    Assert.assertTrue(executionResultsReader.hasNext());
+
+    Assert.assertEquals(executionResultsReader.next().result(), 0);
   }
 
   @Test
@@ -114,7 +126,7 @@ public class OperatorRunnerTest {
 
     @Override
     public ExecutionResult run(OperatorContext operatorContext) {
-      return new ExecutionResult();
+      return new ExecutionResult<String, Integer>("I am a Dummy", 0);
     }
   }
 
